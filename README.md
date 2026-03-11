@@ -1,5 +1,5 @@
 # hemisphere
 Neighborhood Hub App
 Contributors:
-Smeet Patil
-Soham Pawar
+- Smeet Patil
+- Soham Pawar
