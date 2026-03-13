@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../theme/app_theme.dart';
 import 'report_confirmation_screen.dart';
+import '../../services/ml_service.dart';
 
 enum ReportType { accident, waste }
 
@@ -18,10 +19,13 @@ class ReportFormScreen extends StatefulWidget {
 
 class _ReportFormScreenState extends State<ReportFormScreen> {
   final _descriptionController = TextEditingController();
+  final MLService _mlService = MLService();
   XFile? _capturedImage;
+  String? _detectedClass;
   Position? _currentPosition;
   bool _isFetchingLocation = false;
   bool _isSubmitting = false;
+  bool _isPredicting = false;
 
   bool get isAccident => widget.reportType == ReportType.accident;
 
@@ -29,11 +33,13 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
   void initState() {
     super.initState();
     _fetchLocation();
+    _mlService.init();
   }
 
   @override
   void dispose() {
     _descriptionController.dispose();
+    _mlService.dispose();
     super.dispose();
   }
 
@@ -82,7 +88,31 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
       maxWidth: 1280,
     );
     if (image != null && mounted) {
-      setState(() => _capturedImage = image);
+      setState(() {
+        _capturedImage = image;
+        _isPredicting = true;
+      });
+
+      // Query the model
+      String? predictedClass;
+      if (isAccident) {
+        predictedClass = await _mlService.predictSafety(File(image.path));
+      } else {
+        predictedClass = await _mlService.predictGarbage(File(image.path));
+      }
+
+      if (mounted) {
+        setState(() {
+          _detectedClass = predictedClass;
+          _isPredicting = false;
+        });
+
+        // The action to be performed after each class is yet to be determined
+        // we'll just show what was detected.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Model Predicted: ${predictedClass ?? "Error/None"}')),
+        );
+      }
     }
   }
 
