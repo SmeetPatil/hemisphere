@@ -35,37 +35,32 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       extendBody: true,
       bottomNavigationBar: SizedBox(
-        height: 80,
+        height: 65 + MediaQuery.of(context).padding.bottom,
         child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            // Nav bar background
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 65,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: colors.navBackground,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colors.cardShadow,
-                      blurRadius: 20,
-                      offset: const Offset(0, -4),
-                    ),
-                  ],
+            clipBehavior: Clip.none,
+            children: [
+              // Nav bar background
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: colors.navBackground,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.cardShadow,
+                        blurRadius: 20,
+                        offset: const Offset(0, -4),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            // Nav items row
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 65,
-              child: SafeArea(
+              // Nav items row
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 65,
                 child: Row(
                   children: [
                     Expanded(
@@ -108,22 +103,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-            ),
-            // Floating center report button
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: _ReportNavButton(
-                  isActive: _currentIndex == 2,
-                  onTap: () => setState(() => _currentIndex = 2),
+              // Floating center report button
+              Positioned(
+                top: -18,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _ReportNavButton(
+                    isActive: _currentIndex == 2,
+                    onTap: () => setState(() => _currentIndex = 2),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
     );
   }
 }
@@ -150,24 +144,27 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            isActive ? activeIcon : icon,
-            color: isActive ? AppColors.yellow : colors.navInactive,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
+      child: SizedBox(
+        height: double.infinity,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isActive ? activeIcon : icon,
               color: isActive ? AppColors.yellow : colors.navInactive,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              fontSize: 10,
+              size: 24,
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: isActive ? AppColors.yellow : colors.navInactive,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

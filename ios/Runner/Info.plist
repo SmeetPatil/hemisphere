@@ -4,6 +4,10 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Hemisphere uses your location to show your position on the neighborhood map and find nearby reports.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Hemisphere uses your location to show your position on the neighborhood map.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

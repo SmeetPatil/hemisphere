@@ -86,17 +86,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     }
   }
 
-  Future<void> _pickFromGallery() async {
-    final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 1280,
-    );
-    if (image != null && mounted) {
-      setState(() => _capturedImage = image);
-    }
-  }
+
 
   Future<void> _submitReport() async {
     if (_capturedImage == null) {
@@ -244,18 +234,6 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 ),
               ),
             ],
-            const SizedBox(height: 10),
-            if (_capturedImage == null)
-              Center(
-                child: TextButton.icon(
-                  onPressed: _pickFromGallery,
-                  icon: const Icon(Icons.photo_library_outlined, size: 18),
-                  label: const Text('Choose from Gallery'),
-                  style: TextButton.styleFrom(foregroundColor: AppColors.grey300),
-                ),
-              ),
-            const SizedBox(height: 24),
-
             // Location section
             Text('Location', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary)),
             const SizedBox(height: 12),

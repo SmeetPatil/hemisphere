@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/map_marker.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,33 @@ class MarkerInfoSheet extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
     if (diff.inHours < 24) return '${diff.inHours} hours ago';
     return DateFormat('MMM d, h:mm a').format(marker.timestamp);
+  }
+
+  Future<void> _openDirections() async {
+    final lat = marker.position.latitude;
+    final lng = marker.position.longitude;
+    final label = Uri.encodeComponent(marker.title);
+
+    // Try geo URI first (opens native maps on Android/iOS)
+    final geoUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($label)');
+    if (await canLaunchUrl(geoUri)) {
+      await launchUrl(geoUri);
+      return;
+    }
+
+    // Fallback to Google Maps web
+    final webUri = Uri.parse(
+        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+    if (await canLaunchUrl(webUri)) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _callEmergency() async {
+    final uri = Uri.parse('tel:112');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
   }
 
   @override
@@ -111,7 +139,7 @@ class MarkerInfoSheet extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: _callEmergency,
                 icon: const Icon(Icons.local_hospital_rounded),
                 label: const Text('Contact Emergency Services'),
                 style: ElevatedButton.styleFrom(
@@ -121,12 +149,22 @@ class MarkerInfoSheet extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openDirections,
+                icon: const Icon(Icons.directions_rounded),
+                label: const Text('Get Directions'),
+              ),
+            ),
           ] else ...[
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {},
-                child: const Text('Get Directions'),
+              child: ElevatedButton.icon(
+                onPressed: _openDirections,
+                icon: const Icon(Icons.directions_rounded),
+                label: const Text('Get Directions'),
               ),
             ),
           ],
