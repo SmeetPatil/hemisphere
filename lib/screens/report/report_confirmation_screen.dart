@@ -6,12 +6,14 @@ class ReportConfirmationScreen extends StatefulWidget {
   final ReportType reportType;
   final double latitude;
   final double longitude;
+  final String detectedClass;
 
   const ReportConfirmationScreen({
     super.key,
     required this.reportType,
     required this.latitude,
     required this.longitude,
+    required this.detectedClass,
   });
 
   @override
@@ -53,6 +55,7 @@ class _ReportConfirmationScreenState extends State<ReportConfirmationScreen>
 
   @override
   Widget build(BuildContext context) {
+    bool isConstruction = widget.detectedClass == 'construction';
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -91,15 +94,31 @@ class _ReportConfirmationScreenState extends State<ReportConfirmationScreen>
                     const SizedBox(height: 12),
                     Text(
                       isAccident
-                          ? 'Your accident report has been routed to:'
+                          ? (isConstruction 
+                              ? 'Construction Alert Broadcasted!' 
+                              : 'Your accident report has been routed to:')
                           : 'Your waste report has been routed to:',
                       style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
                     // Routing info cards
-                    ...isAccident
-                        ? [
+                    if (isAccident)
+                        ...(isConstruction ? [
+                            _RoutingCard(
+                              icon: Icons.people_rounded,
+                              title: 'Nearby Residents',
+                              subtitle: 'Alert pushed to neighbors within 1 km',
+                              color: const Color(0xFF2196F3),
+                            ),
+                            const SizedBox(height: 10),
+                            _RoutingCard(
+                              icon: Icons.map_rounded,
+                              title: 'Alternative Routes',
+                              subtitle: 'Map updated to suggest alternative roads',
+                              color: AppColors.green,
+                            ),
+                          ] : [
                             _RoutingCard(
                               icon: Icons.local_hospital_rounded,
                               title: 'Nearest Hospital',
@@ -120,8 +139,8 @@ class _ReportConfirmationScreenState extends State<ReportConfirmationScreen>
                               subtitle: 'Alert pushed to neighbors within 1 km',
                               color: const Color(0xFF2196F3),
                             ),
-                          ]
-                        : [
+                          ])
+                    else ...[
                             _RoutingCard(
                               icon: Icons.cleaning_services_rounded,
                               title: 'Municipal Cleaning Staff',

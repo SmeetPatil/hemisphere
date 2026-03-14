@@ -35,6 +35,7 @@ class _MapScreenState extends State<MapScreen>
   LatLng? _userLocation;
   bool _loadingLocation = false;
   bool _isSearchBarActive = false;
+  bool _isLegendExpanded = false;
   List<_GeoResult> _searchResults = [];
   bool _searchLoading = false;
   String? _searchError;
@@ -607,32 +608,64 @@ class _MapScreenState extends State<MapScreen>
 
         // ── Legend ────────────────────────────────────────────────────────
         Positioned(
-          bottom: safeBottom + 16,
+          bottom: safeBottom + 2,
           left: 16,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: context.h.surface.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'LEGEND',
-                  style: AppTextStyles.caption.copyWith(
-                      fontWeight: FontWeight.w700, letterSpacing: 1),
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _isLegendExpanded = !_isLegendExpanded;
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: context.h.surface.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(color: context.h.cardShadow.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+              ),
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                alignment: Alignment.bottomLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.layers_rounded, size: 18, color: context.h.textPrimary),
+                        const SizedBox(width: 8),
+                        Text(
+                          'LEGEND',
+                          style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.w700, letterSpacing: 1),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          _isLegendExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
+                          size: 18,
+                          color: context.h.textSecondary,
+                        ),
+                      ],
+                    ),
+                    if (_isLegendExpanded) ...[
+                      const SizedBox(height: 12),
+                      const _LegendItem(color: AppColors.red, label: 'Accident'),
+                      const _LegendItem(color: AppColors.yellow, label: 'Waste'),
+                      const _LegendItem(color: AppColors.green, label: 'Event'),
+                      const _LegendItem(
+                          color: Color(0xFF2196F3), label: 'Resource'),
+                      const _LegendItem(
+                          color: Color(0xFF1E88E5), label: 'You'),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 8),
-                _LegendItem(color: AppColors.red, label: 'Accident'),
-                _LegendItem(color: AppColors.yellow, label: 'Waste'),
-                _LegendItem(color: AppColors.green, label: 'Event'),
-                _LegendItem(
-                    color: const Color(0xFF2196F3), label: 'Resource'),
-                _LegendItem(
-                    color: const Color(0xFF1E88E5), label: 'You'),
-              ],
+              ),
             ),
           ),
         ),

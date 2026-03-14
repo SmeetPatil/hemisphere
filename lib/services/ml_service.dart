@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
 
@@ -90,7 +89,7 @@ class MLService {
     return input;
   }
 
-  String _getLabel(List<double> probabilities, List<String> labels) {
+  String _getLabel(List<double> probabilities, List<String> labels, {double threshold = 0.70}) {
     double maxProb = double.negativeInfinity;
     int maxIndex = -1;
 
@@ -99,6 +98,11 @@ class MLService {
         maxProb = probabilities[i];
         maxIndex = i;
       }
+    }
+
+    // Filter out uncertain predictions if the confidence is below the threshold
+    if (maxProb < threshold) {
+      return "Unrecognized";
     }
 
     return labels[maxIndex];
