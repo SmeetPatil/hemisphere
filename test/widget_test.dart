@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // This is a basic Flutter widget test.
 //
 // To perform an interaction with a widget in your test, use the WidgetTester
@@ -20,26 +19,3 @@ void main() {
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }
-=======
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
-
-import 'package:hemisphere/main.dart';
-
-void main() {
-  testWidgets('App renders smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const HemisphereApp());
-    await tester.pumpAndSettle();
-
-    // Verify the app renders
-    expect(find.byType(MaterialApp), findsOneWidget);
-  });
-}
->>>>>>> 345e37f98aab254ec09547299a58d8adbac3233b
