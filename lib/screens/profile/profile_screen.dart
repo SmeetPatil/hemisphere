@@ -2,8 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../providers/theme_provider.dart';
-import '../../data/mock_database.dart';
-import '../../widgets/event_card.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -433,45 +431,6 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // ── My Joined Events ──
-                AnimatedBuilder(
-                  animation: MockDatabase.instance,
-                  builder: (context, _) {
-                    final joinedEvents = MockDatabase.instance.joinedEvents;
-                    if (joinedEvents.isEmpty) return const SizedBox.shrink();
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'My Joined Events',
-                          style: AppTextStyles.headlineSmall.copyWith(
-                            color: colors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        SizedBox(
-                          height: 280,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: joinedEvents.length,
-                            separatorBuilder: (context, index) => const SizedBox(width: 16),
-                            itemBuilder: (context, index) {
-                              return SizedBox(
-                                width: 300,
-                                child: EventCard(event: joinedEvents[index]),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    );
-                  },
-                ),
 
                 // ── Recent Activity ──
                 Text(

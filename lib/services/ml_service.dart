@@ -34,6 +34,7 @@ class MLService {
 
       _safetyInterpreter!.run(input, output);
       return _getLabel(output[0], _safetyClasses);
+    } catch (e) {
       print("Prediction error (safety): $e");
       return "Prediction failed";
     }
@@ -52,6 +53,7 @@ class MLService {
 
       _garbageInterpreter!.run(input, output);
       return _getLabel(output[0], _garbageClasses);
+    } catch (e) {
       print("Prediction error (garbage): $e");
       return "Prediction failed";
     }

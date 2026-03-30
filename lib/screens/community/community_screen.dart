@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../data/mock_database.dart';
+import '../../data/dummy_data.dart';
 import '../../models/resource_listing.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/event_card.dart';
 import '../../widgets/resource_card.dart';
-import 'create_post_screen.dart';
+import 'event_form_screen.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -55,7 +55,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 GestureDetector(
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CreatePostScreen(), fullscreenDialog: true),
+                      MaterialPageRoute(builder: (_) => const EventFormScreen()),
                     );
                   },
                   child: Container(
@@ -106,18 +106,13 @@ class _CommunityScreenState extends State<CommunityScreen>
 
           // Tab content
           Expanded(
-            child: AnimatedBuilder(
-              animation: MockDatabase.instance,
-              builder: (context, _) {
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _EventsTab(),
-                    _ResourcesTab(),
-                    _HobbiesTab(),
-                  ],
-                );
-              }
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _EventsTab(),
+                _ResourcesTab(),
+                _HobbiesTab(),
+              ],
             ),
           ),
         ],
@@ -129,19 +124,16 @@ class _CommunityScreenState extends State<CommunityScreen>
 class _EventsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final events = MockDatabase.instance.events;
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      itemCount: events.length,
+      itemCount: DummyData.events.length,
       itemBuilder: (context, index) {
         return EventCard(
-          event: events[index],
+          event: DummyData.events[index],
           onJoin: () {
-            MockDatabase.instance.toggleEventJoin(events[index].id);
-            final isJoined = MockDatabase.instance.hasJoinedEvent(events[index].id);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(isJoined ? 'Joined "${events[index].title}"!' : 'Left event'),
+                content: Text('Joined "${DummyData.events[index].title}"!'),
               ),
             );
           },
@@ -154,7 +146,7 @@ class _EventsTab extends StatelessWidget {
 class _ResourcesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final resources = MockDatabase.instance.resources
+    final resources = DummyData.resources
         .where((r) =>
             r.category != ResourceCategory.hobbies &&
             r.category != ResourceCategory.sports)
@@ -178,7 +170,7 @@ class _ResourcesTab extends StatelessWidget {
 class _HobbiesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final hobbies = MockDatabase.instance.resources
+    final hobbies = DummyData.resources
         .where((r) =>
             r.category == ResourceCategory.hobbies ||
             r.category == ResourceCategory.sports)

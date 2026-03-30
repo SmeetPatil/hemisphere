@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/community_event.dart';
-import '../data/mock_database.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 
@@ -19,8 +17,6 @@ class EventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isJoined = MockDatabase.instance.hasJoinedEvent(event.id);
-    
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -59,14 +55,6 @@ class EventCard extends StatelessWidget {
                 Text(
                   DateFormat('MMM d, h:mm a').format(event.dateTime),
                   style: AppTextStyles.caption.copyWith(color: context.h.textCaption),
-                ),
-                IconButton(
-                  onPressed: () {
-                    Share.share('Join my event: ${event.title} at ${event.location} - https://hemisphere.app/event/${event.id}');
-                  },
-                  icon: Icon(Icons.share_rounded, size: 18, color: context.h.iconSubtle),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
@@ -128,11 +116,10 @@ class EventCard extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: event.isFull ? null : onJoin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isJoined ? AppColors.green : AppColors.yellow,
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       textStyle: AppTextStyles.buttonMedium.copyWith(fontSize: 13),
                     ),
-                    child: Text(event.isFull ? 'Full' : (isJoined ? 'Joined' : 'Join')),
+                    child: Text(event.isFull ? 'Full' : 'Join'),
                   ),
                 ),
               ],

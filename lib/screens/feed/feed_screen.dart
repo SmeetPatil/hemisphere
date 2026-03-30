@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../data/dummy_data.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/feed_card.dart';
-import 'inbox_screen.dart';
 
 class FeedScreen extends StatefulWidget {
   const FeedScreen({super.key});
@@ -29,28 +28,14 @@ class _FeedScreenState extends State<FeedScreen> {
           // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Feed', style: AppTextStyles.displayLarge.copyWith(color: context.h.textPrimary)),
-                      const SizedBox(height: 4),
-                      Text(
-                        'What\'s happening in your neighborhood',
-                        style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.mail_outline_rounded),
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => const InboxScreen(),
-                    ));
-                  },
+                Text('Feed', style: AppTextStyles.displayLarge.copyWith(color: context.h.textPrimary)),
+                const SizedBox(height: 4),
+                Text(
+                  'What\'s happening in your neighborhood',
+                  style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary),
                 ),
               ],
             ),

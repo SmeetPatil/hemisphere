@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../models/resource_listing.dart';
-import '../data/mock_database.dart';
-import '../screens/community/chat_screen.dart';
 import '../theme/app_theme.dart';
 
 class ResourceCard extends StatelessWidget {
@@ -115,30 +113,6 @@ class ResourceCard extends StatelessWidget {
                 ),
               ],
             ),
-            if (resource.ownerName != MockDatabase.instance.currentUserName) ...[
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                height: 32,
-                child: OutlinedButton(
-                  onPressed: () {
-                    final chat = MockDatabase.instance.getOrCreateChat(
-                      resource.ownerName, // Using name as ID for mock
-                      resource.ownerName,
-                      relatedListingId: resource.id,
-                    );
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => ChatScreen(chatId: chat.id),
-                    ));
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    side: BorderSide(color: AppColors.yellow.withValues(alpha: 0.5)),
-                  ),
-                  child: Text('Message', style: AppTextStyles.caption.copyWith(color: AppColors.yellow, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
           ],
         ),
       ),

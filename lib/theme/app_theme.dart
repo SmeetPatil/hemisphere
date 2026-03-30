@@ -65,16 +65,16 @@ class HemisphereColors extends ThemeExtension<HemisphereColors> {
     surface: AppColors.surfaceDark,
     background: AppColors.backgroundDark,
     textPrimary: AppColors.white,
-    textSecondary: AppColors.white,
-    textTertiary: AppColors.white,
-    textCaption: AppColors.white,
-    iconSubtle: AppColors.white,
+    textSecondary: AppColors.grey300,
+    textTertiary: AppColors.grey200,
+    textCaption: AppColors.grey400,
+    iconSubtle: AppColors.grey400,
     inputFill: AppColors.grey800,
     navBackground: AppColors.black,
     divider: AppColors.grey700,
     menuIconBg: AppColors.grey800,
     cardShadow: Color(0x80000000),
-    navInactive: AppColors.white,
+    navInactive: AppColors.grey600,
   );
 
   static const light = HemisphereColors(

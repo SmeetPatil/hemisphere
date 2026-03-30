@@ -351,8 +351,8 @@ class _MapScreenState extends State<MapScreen>
                 ..._filteredMarkers.map((m) {
                   return Marker(
                     point: m.position,
-                    width: 30, // Smaller size
-                    height: 30, // Smaller size
+                    width: 44,
+                    height: 44,
                     child: GestureDetector(
                       onTap: () => _showMarkerInfo(m),
                       child: _MapPin(marker: m),
@@ -584,7 +584,7 @@ class _MapScreenState extends State<MapScreen>
 
         // ── Right-side FABs ───────────────────────────────────────────────
         Positioned(
-          bottom: safeBottom - 6,
+          bottom: safeBottom + 16,
           right: 16,
           child: Column(
             children: [
@@ -608,7 +608,7 @@ class _MapScreenState extends State<MapScreen>
 
         // ── Legend ────────────────────────────────────────────────────────
         Positioned(
-          bottom: safeBottom - 18,
+          bottom: safeBottom + 2,
           left: 16,
           child: GestureDetector(
             onTap: () {
@@ -643,7 +643,6 @@ class _MapScreenState extends State<MapScreen>
                         Text(
                           'LEGEND',
                           style: AppTextStyles.caption.copyWith(
-                              color: context.h.textPrimary,
                               fontWeight: FontWeight.w700, letterSpacing: 1),
                         ),
                         const SizedBox(width: 8),
@@ -725,12 +724,12 @@ class _MapPin extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: marker.color.withValues(alpha: 0.4),
-            blurRadius: 4, // reduced blur
-            spreadRadius: 1, // reduced spread
+            blurRadius: 8,
+            spreadRadius: 2,
           ),
         ],
       ),
-      child: Icon(marker.icon, color: AppColors.white, size: 16), // Smaller icon
+      child: Icon(marker.icon, color: AppColors.white, size: 22),
     );
   }
 }
