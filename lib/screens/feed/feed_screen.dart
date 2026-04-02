@@ -1,6 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../data/mock_database.dart';
+import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../community/chat_screen.dart';
 
@@ -22,14 +23,7 @@ class _FeedScreenState extends State<FeedScreen> {
     super.dispose();
   }
 
-  String _userIdFromName(String name) {
-    return name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
-  }
-
-  void _sendNewMessage() {
+  Future<void> _sendNewMessage() async {
     final recipient = _recipientController.text.trim();
     final message = _messageController.text.trim();
 
@@ -40,17 +34,15 @@ class _FeedScreenState extends State<FeedScreen> {
       return;
     }
 
-    final chat = MockDatabase.instance.getOrCreateChat(
-      _userIdFromName(recipient),
-      recipient,
-    );
-    MockDatabase.instance.sendMessage(chat.id, message);
+    final chatId = await FirestoreService.instance.getOrCreateChat(recipient);
+    await FirestoreService.instance.sendMessage(chatId, message);
 
     _recipientController.clear();
     _messageController.clear();
 
+    if (!mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat.id)),
+      MaterialPageRoute(builder: (_) => ChatScreen(chatId: chatId)),
     );
   }
 
@@ -98,8 +90,8 @@ class _FeedScreenState extends State<FeedScreen> {
               children: [
                 TextField(
                   controller: _recipientController,
-                  style:
-                      AppTextStyles.bodyMedium.copyWith(color: context.h.textPrimary),
+                  style: AppTextStyles.bodyMedium
+                      .copyWith(color: context.h.textPrimary),
                   decoration: InputDecoration(
                     hintText: 'Recipient name',
                     prefixIcon: const Icon(Icons.person_outline_rounded),
@@ -158,12 +150,17 @@ class _FeedScreenState extends State<FeedScreen> {
           const SizedBox(height: 10),
 
           Expanded(
-            child: AnimatedBuilder(
-              animation: MockDatabase.instance,
-              builder: (context, _) {
-                final chats = MockDatabase.instance.chats;
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirestoreService.instance.chatsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.yellow),
+                  );
+                }
+                final docs = snapshot.data?.docs ?? [];
 
-                if (chats.isEmpty) {
+                if (docs.isEmpty) {
                   return Center(
                     child: Text(
                       'No conversations yet. Send a message above.',
@@ -175,13 +172,18 @@ class _FeedScreenState extends State<FeedScreen> {
 
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: chats.length,
+                  itemCount: docs.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final chat = chats[index];
-                    final lastMessage = chat.messages.isNotEmpty
-                        ? chat.messages.last.text
-                        : 'Start conversation';
+                    final data =
+                        docs[index].data()! as Map<String, dynamic>;
+                    final chatId = docs[index].id;
+                    final otherName =
+                        data['otherUserName'] ?? 'User';
+                    final lastMsg =
+                        (data['lastMessage'] ?? '').toString();
+                    final display =
+                        lastMsg.isEmpty ? 'Start conversation' : lastMsg;
 
                     return Container(
                       decoration: BoxDecoration(
@@ -199,18 +201,20 @@ class _FeedScreenState extends State<FeedScreen> {
                         leading: CircleAvatar(
                           backgroundColor: AppColors.yellow,
                           child: Text(
-                            chat.otherUserName.substring(0, 1).toUpperCase(),
+                            otherName.isNotEmpty
+                                ? otherName.substring(0, 1).toUpperCase()
+                                : '?',
                             style: AppTextStyles.labelLarge
                                 .copyWith(color: AppColors.black),
                           ),
                         ),
                         title: Text(
-                          chat.otherUserName,
+                          otherName,
                           style: AppTextStyles.labelLarge
                               .copyWith(color: context.h.textPrimary),
                         ),
                         subtitle: Text(
-                          lastMessage,
+                          display,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.bodySmall
@@ -224,7 +228,8 @@ class _FeedScreenState extends State<FeedScreen> {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (_) => ChatScreen(chatId: chat.id),
+                              builder: (_) =>
+                                  ChatScreen(chatId: chatId),
                             ),
                           );
                         },

@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import '../../theme/app_theme.dart';
 import '../../models/community_event.dart';
 import '../../models/resource_listing.dart';
-import '../../data/mock_database.dart';
+import '../../services/firestore_service.dart';
 
 class _CustomTextField extends StatelessWidget {
   final TextEditingController? controller;
@@ -42,10 +44,14 @@ class _CustomTextField extends StatelessWidget {
         style: AppTextStyles.bodyMedium.copyWith(color: context.h.textPrimary),
         decoration: InputDecoration(
           labelText: labelText,
-          labelStyle: AppTextStyles.labelMedium.copyWith(color: context.h.textSecondary),
+          labelStyle:
+              AppTextStyles.labelMedium.copyWith(color: context.h.textSecondary),
           hintText: hintText,
-          hintStyle: AppTextStyles.bodyMedium.copyWith(color: context.h.textCaption),
-          prefixIcon: icon != null ? Icon(icon, color: context.h.textSecondary, size: 20) : null,
+          hintStyle:
+              AppTextStyles.bodyMedium.copyWith(color: context.h.textCaption),
+          prefixIcon: icon != null
+              ? Icon(icon, color: context.h.textSecondary, size: 20)
+              : null,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),
         ),
@@ -79,7 +85,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       ),
       body: Column(
         children: [
-          // Segmented Control
           Container(
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(4),
@@ -98,10 +103,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
           Expanded(
             child: IndexedStack(
               index: _selectedIndex,
-              children: [
-                const _EventForm(),
-                const _ResourceForm(isHobby: false),
-                const _ResourceForm(isHobby: true),
+              children: const [
+                _EventForm(),
+                _ResourceForm(isHobby: false),
+                _ResourceForm(isHobby: true),
               ],
             ),
           ),
@@ -153,6 +158,11 @@ class _EventFormState extends State<_EventForm> {
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = TimeOfDay.now();
 
+  String get _currentUserName =>
+      FirebaseAuth.instance.currentUser?.displayName ??
+      FirebaseAuth.instance.currentUser?.email?.split('@').first ??
+      'User';
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -160,9 +170,7 @@ class _EventFormState extends State<_EventForm> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (picked != null) {
-      setState(() => _selectedDate = picked);
-    }
+    if (picked != null) setState(() => _selectedDate = picked);
   }
 
   Future<void> _pickTime() async {
@@ -170,12 +178,10 @@ class _EventFormState extends State<_EventForm> {
       context: context,
       initialTime: _selectedTime,
     );
-    if (picked != null) {
-      setState(() => _selectedTime = picked);
-    }
+    if (picked != null) setState(() => _selectedTime = picked);
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_titleC.text.isEmpty || _descC.text.isEmpty) return;
 
     final dateTime = DateTime(
@@ -190,14 +196,15 @@ class _EventFormState extends State<_EventForm> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleC.text,
       description: _descC.text,
-      organizer: MockDatabase.instance.currentUserName,
+      organizer: _currentUserName,
       dateTime: dateTime,
       location: _locC.text.isEmpty ? 'TBD' : _locC.text,
       category: _categoryC.text,
       attendees: 1,
       maxAttendees: int.tryParse(_attendeesC.text) ?? 20,
     );
-    MockDatabase.instance.addEvent(newEvent);
+    await FirestoreService.instance.addEvent(newEvent);
+    if (!mounted) return;
     Navigator.pop(context);
   }
 
@@ -206,19 +213,9 @@ class _EventFormState extends State<_EventForm> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _CustomTextField(
-          controller: _titleC,
-          labelText: 'Event Title',
-          hintText: 'What is happening?',
-          icon: Icons.title_rounded,
-        ),
+        _CustomTextField(controller: _titleC, labelText: 'Event Title', hintText: 'What is happening?', icon: Icons.title_rounded),
         const SizedBox(height: 16),
-        _CustomTextField(
-          controller: _locC,
-          labelText: 'Location',
-          hintText: 'Where is it?',
-          icon: Icons.location_on_rounded,
-        ),
+        _CustomTextField(controller: _locC, labelText: 'Location', hintText: 'Where is it?', icon: Icons.location_on_rounded),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -237,9 +234,7 @@ class _EventFormState extends State<_EventForm> {
             const SizedBox(width: 16),
             Expanded(
               child: _CustomTextField(
-                controller: TextEditingController(
-                  text: _selectedTime.format(context),
-                ),
+                controller: TextEditingController(text: _selectedTime.format(context)),
                 labelText: 'Time',
                 hintText: 'Select Time',
                 icon: Icons.access_time_rounded,
@@ -252,33 +247,13 @@ class _EventFormState extends State<_EventForm> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(
-              child: _CustomTextField(
-                controller: _categoryC,
-                labelText: 'Category',
-                hintText: 'e.g. Social, Tech',
-                icon: Icons.category_rounded,
-              ),
-            ),
+            Expanded(child: _CustomTextField(controller: _categoryC, labelText: 'Category', hintText: 'e.g. Social, Tech', icon: Icons.category_rounded)),
             const SizedBox(width: 16),
-            Expanded(
-              child: _CustomTextField(
-                controller: _attendeesC,
-                labelText: 'Max People',
-                hintText: 'e.g. 20',
-                icon: Icons.people_rounded,
-                keyboardType: TextInputType.number,
-              ),
-            ),
+            Expanded(child: _CustomTextField(controller: _attendeesC, labelText: 'Max People', hintText: 'e.g. 20', icon: Icons.people_rounded, keyboardType: TextInputType.number)),
           ],
         ),
         const SizedBox(height: 16),
-        _CustomTextField(
-          controller: _descC,
-          maxLines: 4,
-          labelText: 'Description',
-          hintText: 'Provide details about the event',
-        ),
+        _CustomTextField(controller: _descC, maxLines: 4, labelText: 'Description', hintText: 'Provide details about the event'),
         const SizedBox(height: 32),
         ElevatedButton(
           onPressed: _submit,
@@ -289,10 +264,7 @@ class _EventFormState extends State<_EventForm> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             elevation: 0,
           ),
-          child: Text(
-            'Create Event',
-            style: AppTextStyles.labelLarge.copyWith(color: AppColors.black, fontWeight: FontWeight.w700),
-          ),
+          child: Text('Create Event', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black, fontWeight: FontWeight.w700)),
         ),
       ],
     );
@@ -311,20 +283,26 @@ class _ResourceFormState extends State<_ResourceForm> {
   final _titleC = TextEditingController();
   final _descC = TextEditingController();
 
-  void _submit() {
+  String get _currentUserName =>
+      FirebaseAuth.instance.currentUser?.displayName ??
+      FirebaseAuth.instance.currentUser?.email?.split('@').first ??
+      'User';
+
+  Future<void> _submit() async {
     if (_titleC.text.isEmpty || _descC.text.isEmpty) return;
-    
+
     final newRes = ResourceListing(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       title: _titleC.text,
       description: _descC.text,
-      ownerName: MockDatabase.instance.currentUserName,
+      ownerName: _currentUserName,
       ownerAvatar: 'ME',
       category: widget.isHobby ? ResourceCategory.hobbies : ResourceCategory.tools,
       isAvailable: true,
       postedAt: DateTime.now(),
     );
-    MockDatabase.instance.addResourceOrHobby(newRes);
+    await FirestoreService.instance.addResource(newRes);
+    if (!mounted) return;
     Navigator.pop(context);
   }
 

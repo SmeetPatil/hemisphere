@@ -1,9 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
-import '../../data/mock_database.dart';
 import '../../models/community_event.dart';
 import '../../models/resource_listing.dart';
+import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/event_card.dart';
 import '../../widgets/resource_card.dart';
@@ -21,7 +22,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   late TabController _tabController;
 
   bool _showComposer = true;
-  int _composerType = 0; // 0: Event, 1: Resource, 2: Hobby
+  int _composerType = 0;
 
   final _eventTitleController = TextEditingController();
   final _eventDescController = TextEditingController();
@@ -37,6 +38,11 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   TimeOfDay _selectedTime = const TimeOfDay(hour: 10, minute: 0);
+
+  String get _currentUserName =>
+      FirebaseAuth.instance.currentUser?.displayName ??
+      FirebaseAuth.instance.currentUser?.email?.split('@').first ??
+      'User';
 
   @override
   void initState() {
@@ -71,9 +77,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
-    if (date != null) {
-      setState(() => _selectedDate = date);
-    }
+    if (date != null) setState(() => _selectedDate = date);
   }
 
   Future<void> _pickTime() async {
@@ -81,12 +85,10 @@ class _CommunityScreenState extends State<CommunityScreen>
       context: context,
       initialTime: _selectedTime,
     );
-    if (time != null) {
-      setState(() => _selectedTime = time);
-    }
+    if (time != null) setState(() => _selectedTime = time);
   }
 
-  void _submitComposer() {
+  Future<void> _submitComposer() async {
     if (_composerType == 0) {
       if (_eventTitleController.text.trim().isEmpty ||
           _eventDescController.text.trim().isEmpty ||
@@ -107,7 +109,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: _eventTitleController.text.trim(),
         description: _eventDescController.text.trim(),
-        organizer: MockDatabase.instance.currentUserName,
+        organizer: _currentUserName,
         dateTime: eventDateTime,
         location: _eventLocationController.text.trim(),
         category: _eventCategoryController.text.trim().isEmpty
@@ -117,7 +119,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         maxAttendees: int.tryParse(_eventMaxAttendeesController.text) ?? 20,
       );
 
-      MockDatabase.instance.addEvent(event);
+      await FirestoreService.instance.addEvent(event);
       _eventTitleController.clear();
       _eventDescController.clear();
       _eventLocationController.clear();
@@ -135,14 +137,14 @@ class _CommunityScreenState extends State<CommunityScreen>
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: _resourceTitleController.text.trim(),
         description: _resourceDescController.text.trim(),
-        ownerName: MockDatabase.instance.currentUserName,
-        ownerAvatar: _avatarFromName(MockDatabase.instance.currentUserName),
+        ownerName: _currentUserName,
+        ownerAvatar: _avatarFromName(_currentUserName),
         category: ResourceCategory.tools,
         isAvailable: true,
         postedAt: DateTime.now(),
       );
 
-      MockDatabase.instance.addResourceOrHobby(resource);
+      await FirestoreService.instance.addResource(resource);
       _resourceTitleController.clear();
       _resourceDescController.clear();
       _showSnack('Resource shared successfully.');
@@ -157,14 +159,14 @@ class _CommunityScreenState extends State<CommunityScreen>
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: _hobbyTitleController.text.trim(),
         description: _hobbyDescController.text.trim(),
-        ownerName: MockDatabase.instance.currentUserName,
-        ownerAvatar: _avatarFromName(MockDatabase.instance.currentUserName),
+        ownerName: _currentUserName,
+        ownerAvatar: _avatarFromName(_currentUserName),
         category: ResourceCategory.hobbies,
         isAvailable: true,
         postedAt: DateTime.now(),
       );
 
-      MockDatabase.instance.addResourceOrHobby(hobby);
+      await FirestoreService.instance.addResource(hobby);
       _hobbyTitleController.clear();
       _hobbyDescController.clear();
       _showSnack('Hobby shared successfully.');
@@ -185,32 +187,17 @@ class _CommunityScreenState extends State<CommunityScreen>
         .split(RegExp(r'\s+'))
         .where((part) => part.isNotEmpty)
         .toList();
-
-    if (parts.isEmpty) {
-      return 'U';
-    }
-    if (parts.length == 1) {
-      return parts.first.substring(0, 1).toUpperCase();
-    }
+    if (parts.isEmpty) return 'U';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 
-  String _userIdFromName(String name) {
-    return name
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
-        .replaceAll(RegExp(r'^_+|_+$'), '');
-  }
-
-  void _openChatWith(String personName, {String? relatedListingId}) {
-    final chat = MockDatabase.instance.getOrCreateChat(
-      _userIdFromName(personName),
-      personName,
-      relatedListingId: relatedListingId,
-    );
-
+  void _openChatWith(String personName, {String? relatedListingId}) async {
+    final chatId = await FirestoreService.instance
+        .getOrCreateChat(personName, relatedListingId: relatedListingId);
+    if (!mounted) return;
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ChatScreen(chatId: chat.id)),
+      MaterialPageRoute(builder: (_) => ChatScreen(chatId: chatId)),
     );
   }
 
@@ -243,9 +230,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {
-                    setState(() => _showComposer = !_showComposer);
-                  },
+                  onTap: () => setState(() => _showComposer = !_showComposer),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
@@ -346,38 +331,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                   ),
                   const SizedBox(height: 12),
                   if (_composerType == 0) ...[
-                    _CommunityInput(
-                      controller: _eventTitleController,
-                      hint: 'Event title',
-                    ),
+                    _CommunityInput(controller: _eventTitleController, hint: 'Event title'),
                     const SizedBox(height: 8),
-                    _CommunityInput(
-                      controller: _eventDescController,
-                      hint: 'Event details',
-                      maxLines: 2,
-                    ),
+                    _CommunityInput(controller: _eventDescController, hint: 'Event details', maxLines: 2),
                     const SizedBox(height: 8),
-                    _CommunityInput(
-                      controller: _eventLocationController,
-                      hint: 'Location',
-                    ),
+                    _CommunityInput(controller: _eventLocationController, hint: 'Location'),
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        Expanded(
-                          child: _CommunityInput(
-                            controller: _eventCategoryController,
-                            hint: 'Category',
-                          ),
-                        ),
+                        Expanded(child: _CommunityInput(controller: _eventCategoryController, hint: 'Category')),
                         const SizedBox(width: 8),
-                        Expanded(
-                          child: _CommunityInput(
-                            controller: _eventMaxAttendeesController,
-                            hint: 'Max people',
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
+                        Expanded(child: _CommunityInput(controller: _eventMaxAttendeesController, hint: 'Max people', keyboardType: TextInputType.number)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -386,46 +350,28 @@ class _CommunityScreenState extends State<CommunityScreen>
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _pickDate,
-                            icon: const Icon(Icons.calendar_today_rounded,
-                                size: 16),
-                            label: Text(
-                              DateFormat('d MMM yyyy').format(_selectedDate),
-                            ),
+                            icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                            label: Text(DateFormat('d MMM yyyy').format(_selectedDate)),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _pickTime,
-                            icon:
-                                const Icon(Icons.access_time_rounded, size: 16),
+                            icon: const Icon(Icons.access_time_rounded, size: 16),
                             label: Text(_selectedTime.format(context)),
                           ),
                         ),
                       ],
                     ),
                   ] else if (_composerType == 1) ...[
-                    _CommunityInput(
-                      controller: _resourceTitleController,
-                      hint: 'Resource title',
-                    ),
+                    _CommunityInput(controller: _resourceTitleController, hint: 'Resource title'),
                     const SizedBox(height: 8),
-                    _CommunityInput(
-                      controller: _resourceDescController,
-                      hint: 'What are you sharing?',
-                      maxLines: 2,
-                    ),
+                    _CommunityInput(controller: _resourceDescController, hint: 'What are you sharing?', maxLines: 2),
                   ] else ...[
-                    _CommunityInput(
-                      controller: _hobbyTitleController,
-                      hint: 'Hobby title',
-                    ),
+                    _CommunityInput(controller: _hobbyTitleController, hint: 'Hobby title'),
                     const SizedBox(height: 8),
-                    _CommunityInput(
-                      controller: _hobbyDescController,
-                      hint: 'Tell neighbors about your hobby',
-                      maxLines: 2,
-                    ),
+                    _CommunityInput(controller: _hobbyDescController, hint: 'Tell neighbors about your hobby', maxLines: 2),
                   ],
                   const SizedBox(height: 10),
                   SizedBox(
@@ -474,51 +420,50 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 }
 
+// ---------------------------------------------------------------------------
+// Tabs — now use Firestore streams
+// ---------------------------------------------------------------------------
+
 class _EventsTab extends StatelessWidget {
   final double extraTopPadding;
   final void Function(String personName, String relatedId) onMessageTap;
 
-  const _EventsTab({
-    required this.extraTopPadding,
-    required this.onMessageTap,
-  });
+  const _EventsTab({required this.extraTopPadding, required this.onMessageTap});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: MockDatabase.instance,
-      builder: (context, _) {
-        final events = MockDatabase.instance.events;
-
+    return StreamBuilder<List<CommunityEvent>>(
+      stream: FirestoreService.instance.eventsStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.yellow));
+        }
+        final events = snapshot.data ?? [];
         if (events.isEmpty) {
           return Center(
-            child: Text(
-              'No events yet. Host one above.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: context.h.textSecondary),
-            ),
+            child: Text('No events yet. Host one above.',
+                style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary)),
           );
         }
-
         return ListView.builder(
           padding: EdgeInsets.fromLTRB(20, extraTopPadding, 20, 18),
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
-            final isJoined = MockDatabase.instance.hasJoinedEvent(event.id);
-
             return Column(
               children: [
                 EventCard(
                   event: event,
-                  isJoined: isJoined,
+                  isJoined: false,
                   messageText: 'Message ${event.organizer}',
                   onMessageTap: () => onMessageTap(event.organizer, event.id),
-                  onJoin: () {
-                    MockDatabase.instance.toggleEventJoin(event.id);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Joined "${event.title}"')),
-                    );
+                  onJoin: () async {
+                    await FirestoreService.instance.toggleEventJoin(event.id);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Toggled join for "${event.title}"')),
+                      );
+                    }
                   },
                 ),
                 const SizedBox(height: 12),
@@ -535,32 +480,23 @@ class _ResourcesTab extends StatelessWidget {
   final double extraTopPadding;
   final void Function(String personName, String relatedId) onMessageTap;
 
-  const _ResourcesTab({
-    required this.extraTopPadding,
-    required this.onMessageTap,
-  });
+  const _ResourcesTab({required this.extraTopPadding, required this.onMessageTap});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: MockDatabase.instance,
-      builder: (context, _) {
-        final resources = MockDatabase.instance.resources
-            .where((r) =>
-                r.category != ResourceCategory.hobbies &&
-                r.category != ResourceCategory.sports)
-            .toList();
-
+    return StreamBuilder<List<ResourceListing>>(
+      stream: FirestoreService.instance.resourcesStream(hobbiesOnly: false),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.yellow));
+        }
+        final resources = snapshot.data ?? [];
         if (resources.isEmpty) {
           return Center(
-            child: Text(
-              'No resources shared yet.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: context.h.textSecondary),
-            ),
+            child: Text('No resources shared yet.',
+                style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary)),
           );
         }
-
         return ListView.builder(
           padding: EdgeInsets.fromLTRB(20, extraTopPadding, 20, 18),
           itemCount: resources.length,
@@ -587,32 +523,23 @@ class _HobbiesTab extends StatelessWidget {
   final double extraTopPadding;
   final void Function(String personName, String relatedId) onMessageTap;
 
-  const _HobbiesTab({
-    required this.extraTopPadding,
-    required this.onMessageTap,
-  });
+  const _HobbiesTab({required this.extraTopPadding, required this.onMessageTap});
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: MockDatabase.instance,
-      builder: (context, _) {
-        final hobbies = MockDatabase.instance.resources
-            .where((r) =>
-                r.category == ResourceCategory.hobbies ||
-                r.category == ResourceCategory.sports)
-            .toList();
-
+    return StreamBuilder<List<ResourceListing>>(
+      stream: FirestoreService.instance.resourcesStream(hobbiesOnly: true),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppColors.yellow));
+        }
+        final hobbies = snapshot.data ?? [];
         if (hobbies.isEmpty) {
           return Center(
-            child: Text(
-              'No hobbies shared yet.',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: context.h.textSecondary),
-            ),
+            child: Text('No hobbies shared yet.',
+                style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary)),
           );
         }
-
         return ListView.builder(
           padding: EdgeInsets.fromLTRB(20, extraTopPadding, 20, 18),
           itemCount: hobbies.length,
@@ -635,16 +562,15 @@ class _HobbiesTab extends StatelessWidget {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Shared widgets (unchanged)
+// ---------------------------------------------------------------------------
 class _ComposerTypeChip extends StatelessWidget {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
 
-  const _ComposerTypeChip({
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
+  const _ComposerTypeChip({required this.label, required this.isActive, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -656,9 +582,7 @@ class _ComposerTypeChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive ? AppColors.yellow : context.h.surface,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isActive ? AppColors.yellow : context.h.divider,
-            ),
+            border: Border.all(color: isActive ? AppColors.yellow : context.h.divider),
           ),
           child: Text(
             label,
@@ -680,12 +604,7 @@ class _CommunityInput extends StatelessWidget {
   final int maxLines;
   final TextInputType? keyboardType;
 
-  const _CommunityInput({
-    required this.controller,
-    required this.hint,
-    this.maxLines = 1,
-    this.keyboardType,
-  });
+  const _CommunityInput({required this.controller, required this.hint, this.maxLines = 1, this.keyboardType});
 
   @override
   Widget build(BuildContext context) {
@@ -699,12 +618,8 @@ class _CommunityInput extends StatelessWidget {
         isDense: true,
         filled: true,
         fillColor: context.h.inputFill,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       ),
     );
   }
@@ -714,10 +629,7 @@ class _MessageBox extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
 
-  const _MessageBox({
-    required this.text,
-    required this.onTap,
-  });
+  const _MessageBox({required this.text, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -737,21 +649,12 @@ class _MessageBox extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: onTap,
             icon: const Icon(Icons.chat_rounded, size: 16),
-            label: Text(
-              text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            label: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.yellow,
               foregroundColor: AppColors.black,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              textStyle: AppTextStyles.caption.copyWith(
-                color: AppColors.black,
-                fontWeight: FontWeight.w700,
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              textStyle: AppTextStyles.caption.copyWith(color: AppColors.black, fontWeight: FontWeight.w700),
             ),
           ),
         ),

@@ -1,5 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import '../../data/mock_database.dart';
+
+import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../community/chat_screen.dart';
 
@@ -12,43 +14,62 @@ class InboxScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Inbox'),
       ),
-      body: AnimatedBuilder(
-        animation: MockDatabase.instance,
-        builder: (context, _) {
-          final chats = MockDatabase.instance.chats;
-          if (chats.isEmpty) {
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirestoreService.instance.chatsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.yellow),
+            );
+          }
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
             return Center(
               child: Text(
                 'No messages yet.',
-                style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary),
+                style: AppTextStyles.bodyMedium
+                    .copyWith(color: context.h.textSecondary),
               ),
             );
           }
           return ListView.separated(
-            itemCount: chats.length,
+            itemCount: docs.length,
             separatorBuilder: (_, __) => Divider(color: context.h.divider),
             itemBuilder: (context, index) {
-              final chat = chats[index];
-              final lastMsg = chat.messages.isNotEmpty ? chat.messages.last.text : 'New chat started';
+              final data = docs[index].data()! as Map<String, dynamic>;
+              final chatId = docs[index].id;
+              final otherName = data['otherUserName'] ?? 'User';
+              final lastMsg = (data['lastMessage'] ?? '').toString();
+              final display = lastMsg.isEmpty ? 'New chat started' : lastMsg;
+
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: AppColors.yellow,
-                  child: Text(chat.otherUserName.substring(0, 1).toUpperCase()),
+                  child: Text(
+                    otherName.isNotEmpty
+                        ? otherName.substring(0, 1).toUpperCase()
+                        : '?',
+                  ),
                 ),
                 title: Text(
-                  chat.otherUserName,
-                  style: AppTextStyles.labelLarge.copyWith(color: context.h.textPrimary),
+                  otherName,
+                  style: AppTextStyles.labelLarge
+                      .copyWith(color: context.h.textPrimary),
                 ),
                 subtitle: Text(
-                  lastMsg,
+                  display,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.caption.copyWith(color: context.h.textCaption),
+                  style: AppTextStyles.caption
+                      .copyWith(color: context.h.textCaption),
                 ),
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(
-                    builder: (_) => ChatScreen(chatId: chat.id),
-                  ));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(chatId: chatId),
+                    ),
+                  );
                 },
               );
             },
