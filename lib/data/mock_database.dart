@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import '../../models/community_event.dart';
 import '../../models/resource_listing.dart';
@@ -37,14 +39,27 @@ class ChatThread {
 class MockDatabase extends ChangeNotifier {
   static final MockDatabase instance = MockDatabase._internal();
 
-  MockDatabase._internal() {
+  static const List<String> _sampleNames = [
+    'Aarav Sharma',
+    'Riya Kapoor',
+    'Kabir Mehta',
+    'Naina Verma',
+    'Ishaan Rao',
+    'Diya Malhotra',
+    'Arjun Sinha',
+    'Maya Patel',
+  ];
+
+  MockDatabase._internal()
+      : currentUserName = _sampleNames[Random().nextInt(_sampleNames.length)] {
     _events = List.from(DummyData.events);
     _resources = List.from(DummyData.resources);
     _feedPosts = List.from(DummyData.feedPosts);
   }
 
   final String currentUserId = 'my_user_id';
-  final String currentUserName = 'Me';
+  String currentUserName;
+  bool _isNewUser = true;
 
   List<CommunityEvent> _events = [];
   List<ResourceListing> _resources = [];
@@ -60,10 +75,21 @@ class MockDatabase extends ChangeNotifier {
   List<ResourceListing> get resources => _resources;
   List<FeedPost> get feedPosts => _feedPosts;
   List<ChatThread> get chats => _chats;
+  bool get isNewUser => _isNewUser;
 
   List<CommunityEvent> get joinedEvents => _events.where((e) => _joinedEventIds.contains(e.id)).toList();
 
   bool hasJoinedEvent(String eventId) => _joinedEventIds.contains(eventId);
+
+  void completeOnboarding() {
+    _isNewUser = false;
+    notifyListeners();
+  }
+
+  void resetAsNewUser() {
+    _isNewUser = true;
+    notifyListeners();
+  }
 
   void toggleEventJoin(String eventId) {
     if (_joinedEventIds.contains(eventId)) {

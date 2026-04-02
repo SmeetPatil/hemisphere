@@ -7,12 +7,18 @@ class EventCard extends StatelessWidget {
   final CommunityEvent event;
   final VoidCallback? onTap;
   final VoidCallback? onJoin;
+  final bool isJoined;
+  final String? messageText;
+  final VoidCallback? onMessageTap;
 
   const EventCard({
     super.key,
     required this.event,
     this.onTap,
     this.onJoin,
+    this.isJoined = false,
+    this.messageText,
+    this.onMessageTap,
   });
 
   @override
@@ -86,16 +92,18 @@ class EventCard extends StatelessWidget {
             const SizedBox(height: 12),
             // Attendance bar & Join button
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Text(
                         '${event.attendees}/${event.maxAttendees} attending',
                         style: AppTextStyles.caption.copyWith(color: context.h.textCaption),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
@@ -107,20 +115,50 @@ class EventCard extends StatelessWidget {
                           minHeight: 4,
                         ),
                       ),
+                      const SizedBox(height: 16), // Match padding for visual balance
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
-                SizedBox(
-                  height: 36,
-                  child: ElevatedButton(
-                    onPressed: event.isFull ? null : onJoin,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      textStyle: AppTextStyles.buttonMedium.copyWith(fontSize: 13),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (messageText != null && onMessageTap != null) ...[
+                      SizedBox(
+                        height: 30,
+                        child: OutlinedButton.icon(
+                          onPressed: onMessageTap,
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
+                          label: Text(
+                            messageText!,
+                            style: AppTextStyles.caption.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: context.h.textPrimary,
+                            side: BorderSide(color: context.h.divider),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    SizedBox(
+                      height: 36,
+                      child: ElevatedButton(
+                        onPressed: event.isFull || isJoined ? null : onJoin,
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          textStyle: AppTextStyles.buttonMedium.copyWith(fontSize: 13),
+                        ),
+                        child: Text(isJoined ? 'Joined' : (event.isFull ? 'Full' : 'Join')),
+                      ),
                     ),
-                    child: Text(event.isFull ? 'Full' : 'Join'),
-                  ),
+                  ],
                 ),
               ],
             ),

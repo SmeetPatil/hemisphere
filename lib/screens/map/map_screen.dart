@@ -584,7 +584,7 @@ class _MapScreenState extends State<MapScreen>
 
         // ── Right-side FABs ───────────────────────────────────────────────
         Positioned(
-          bottom: safeBottom + 16,
+          bottom: safeBottom + 4,
           right: 16,
           child: Column(
             children: [
@@ -608,7 +608,7 @@ class _MapScreenState extends State<MapScreen>
 
         // ── Legend ────────────────────────────────────────────────────────
         Positioned(
-          bottom: safeBottom + 2,
+          bottom: safeBottom - 10,
           left: 16,
           child: GestureDetector(
             onTap: () {
