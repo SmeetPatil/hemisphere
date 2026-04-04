@@ -102,10 +102,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final colors = context.h;
 
     return Scaffold(
-      backgroundColor:
-          isDark ? AppColors.backgroundDark : const Color(0xFFECE8D8),
+      backgroundColor: isDark ? colors.background : const Color(0xFFECE8D8),
       body: Stack(
         children: [
           // Yellow arc header
@@ -134,12 +134,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   child: Container(
                     padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
                     decoration: BoxDecoration(
-                      color: AppColors.yellow,
+                      color: isDark ? colors.card : const Color(0xFFF2F2F2),
                       borderRadius: BorderRadius.circular(34),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black
-                              .withValues(alpha: isDark ? 0.35 : 0.16),
+                          color: colors.cardShadow,
                           blurRadius: 26,
                           offset: const Offset(0, 16),
                         ),
@@ -155,7 +154,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           Text(
                             'Create Account',
                             style: AppTextStyles.headlineLarge.copyWith(
-                              color: AppColors.black,
+                              color:
+                                  isDark ? AppColors.white : AppColors.grey900,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -163,7 +163,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           Text(
                             'Join the Hemisphere community',
                             style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.grey800,
+                              color:
+                                  isDark ? AppColors.grey400 : AppColors.grey600,
                             ),
                           ),
                           const SizedBox(height: 20),
@@ -173,6 +174,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             controller: _nameController,
                             label: 'Full Name',
                             icon: Icons.person_outline,
+                            isDark: isDark,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
                                 return 'Enter your name';
@@ -187,6 +189,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             controller: _emailController,
                             label: 'Email',
                             icon: Icons.mail_outline,
+                            isDark: isDark,
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
@@ -203,6 +206,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             controller: _passwordController,
                             label: 'Create Password',
                             icon: Icons.lock_outline,
+                            isDark: isDark,
                             obscureText: _obscurePassword,
                             validator: (v) {
                               if (v == null || v.isEmpty) {
@@ -219,7 +223,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     ? Icons.visibility_off_outlined
                                     : Icons.visibility_outlined,
                                 size: 18,
-                                color: AppColors.grey800,
+                                color: isDark
+                                  ? AppColors.grey400
+                                  : AppColors.grey600,
                               ),
                               onPressed: () => setState(
                                   () => _obscurePassword = !_obscurePassword),
@@ -232,8 +238,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             width: double.infinity,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.black,
-                                foregroundColor: AppColors.yellow,
+                                backgroundColor: AppColors.yellow,
+                                foregroundColor: AppColors.black,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -245,14 +251,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       height: 22,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2.5,
-                                        color: AppColors.yellow,
+                                        color: AppColors.black,
                                       ),
                                     )
                                   : Text(
                                       'Sign Up',
                                       style:
                                           AppTextStyles.buttonMedium.copyWith(
-                                        color: AppColors.yellow,
+                                        color: AppColors.black,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -263,8 +269,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           // Divider
                           Row(
                             children: [
-                              const Expanded(
-                                child: Divider(color: AppColors.grey600),
+                              Expanded(
+                                child: Divider(
+                                  color: isDark
+                                      ? AppColors.grey700
+                                      : AppColors.grey300,
+                                ),
                               ),
                               Padding(
                                 padding:
@@ -272,12 +282,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 child: Text(
                                   'or continue with',
                                   style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.grey800,
+                                    color: isDark
+                                        ? AppColors.grey400
+                                        : const Color(0xFF9D9D9D),
                                   ),
                                 ),
                               ),
-                              const Expanded(
-                                child: Divider(color: AppColors.grey600),
+                              Expanded(
+                                child: Divider(
+                                  color: isDark
+                                      ? AppColors.grey700
+                                      : AppColors.grey300,
+                                ),
                               ),
                             ],
                           ),
@@ -291,6 +307,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   icon: Icons.g_mobiledata_rounded,
                                   label: 'Google',
                                   color: Colors.redAccent,
+                                  isDark: isDark,
                                   onTap: _loading ? null : _signInGoogle,
                                 ),
                               ),
@@ -300,6 +317,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   icon: Icons.phone_outlined,
                                   label: 'Phone',
                                   color: AppColors.green,
+                                  isDark: isDark,
                                   onTap: _loading
                                       ? null
                                       : () {
@@ -322,7 +340,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               'By signing up, you agree to our\nTerms & Privacy Policy',
                               textAlign: TextAlign.center,
                               style: AppTextStyles.caption.copyWith(
-                                color: AppColors.grey800,
+                                color: isDark
+                                    ? AppColors.grey400
+                                    : const Color(0xFF9D9D9D),
                               ),
                             ),
                           ),
@@ -341,7 +361,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               child: RichText(
                                 text: TextSpan(
                                   style: AppTextStyles.bodySmall.copyWith(
-                                    color: AppColors.grey900,
+                                    color: isDark
+                                        ? AppColors.grey300
+                                        : AppColors.grey600,
                                   ),
                                   children: [
                                     const TextSpan(
@@ -349,7 +371,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     TextSpan(
                                       text: 'Login',
                                       style: AppTextStyles.bodySmall.copyWith(
-                                        color: AppColors.black,
+                                        color: isDark
+                                            ? AppColors.yellow
+                                            : AppColors.black,
                                         fontWeight: FontWeight.w700,
                                       ),
                                     ),
@@ -375,6 +399,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    required bool isDark,
     bool obscureText = false,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
@@ -385,23 +410,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
-      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.grey900),
+      style: AppTextStyles.bodyMedium.copyWith(
+        color: isDark ? AppColors.white : AppColors.grey900,
+      ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle:
-            AppTextStyles.bodySmall.copyWith(color: AppColors.grey800),
-        prefixIcon: Icon(icon, size: 18, color: AppColors.grey800),
+        labelStyle: AppTextStyles.bodySmall.copyWith(
+          color: isDark ? AppColors.grey400 : AppColors.grey600,
+        ),
+        prefixIcon: Icon(
+          icon,
+          size: 18,
+          color: isDark ? AppColors.grey400 : AppColors.grey600,
+        ),
         suffixIcon: suffixIcon,
         filled: false,
         contentPadding: const EdgeInsets.symmetric(vertical: 8),
-        border: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.grey400),
+        border: UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: isDark ? AppColors.grey700 : AppColors.grey300,
+          ),
         ),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.grey400),
+        enabledBorder: UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: isDark ? AppColors.grey700 : AppColors.grey300,
+          ),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.black, width: 2),
+          borderSide: BorderSide(color: AppColors.yellow, width: 2),
         ),
       ),
     );
@@ -434,7 +470,7 @@ class _BrandMark extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(5),
                   border: Border.all(
-                    color: AppColors.black.withValues(alpha: 0.25),
+                    color: AppColors.yellow.withValues(alpha: 0.7),
                     width: 2,
                   ),
                 ),
@@ -470,18 +506,20 @@ class _SocialButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    required this.isDark,
     this.onTap,
   });
 
   final IconData icon;
   final String label;
   final Color color;
+  final bool isDark;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.grey900,
+      color: isDark ? AppColors.grey900 : AppColors.white,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -490,6 +528,9 @@ class _SocialButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? AppColors.grey700 : AppColors.grey300,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -499,7 +540,7 @@ class _SocialButton extends StatelessWidget {
               Text(
                 label,
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.white,
+                  color: isDark ? AppColors.white : AppColors.grey900,
                   fontWeight: FontWeight.w600,
                 ),
               ),
