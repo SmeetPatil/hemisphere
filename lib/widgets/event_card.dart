@@ -125,10 +125,10 @@ class EventCard extends StatelessWidget {
                   children: [
                     if (messageText != null && onMessageTap != null) ...[
                       SizedBox(
-                        height: 30,
+                        height: 38,
                         child: OutlinedButton.icon(
                           onPressed: onMessageTap,
-                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14),
+                          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
                           label: Text(
                             messageText!,
                             style: AppTextStyles.caption.copyWith(

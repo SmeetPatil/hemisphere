@@ -11,6 +11,7 @@ class FeedPost {
   final int comments;
   final String? imageUrl;
   final String? location;
+  final String? neighborhoodId;
 
   const FeedPost({
     required this.id,
@@ -23,6 +24,7 @@ class FeedPost {
     required this.comments,
     this.imageUrl,
     this.location,
+    this.neighborhoodId,
   });
 
   String get typeLabel {

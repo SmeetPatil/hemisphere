@@ -9,6 +9,8 @@ import '../auth/login_screen.dart';
 import '../settings/settings_screen.dart';
 import 'edit_profile_screen.dart';
 import 'followers_screen.dart';
+import 'emission_logger_screen.dart';
+import 'my_activity_list.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -350,10 +352,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        // Log Emissions button
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const EmissionLoggerScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.eco_rounded, size: 16),
+                            label: const Text('Log Emissions'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.green,
+                              side: const BorderSide(color: AppColors.green),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
+
+                  // My Activity Section
+                  Text(
+                    'My Posts & Activity',
+                    style: AppTextStyles.headlineMedium.copyWith(
+                      color: colors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const MyActivityList(),
+                  const SizedBox(height: 24),
 
                   // Settings section
                   Container(

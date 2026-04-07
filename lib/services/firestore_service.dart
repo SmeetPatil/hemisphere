@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import '../models/community_event.dart';
 import '../models/resource_listing.dart';
 import '../models/feed_post.dart';
+import '../models/map_marker.dart';
+import 'package:latlong2/latlong.dart';
 
 // ---------------------------------------------------------------------------
 // Firestore Service – replaces MockDatabase with real Cloud Firestore data.
@@ -38,6 +40,9 @@ class FirestoreService extends ChangeNotifier {
         'joinedAt': FieldValue.serverTimestamp(),
         'followers': <String>[],
         'following': <String>[],
+        'homeNeighborhoodId': null,
+        'homeLatitude': null,
+        'homeLongitude': null,
       });
     }
   }
@@ -59,6 +64,46 @@ class FirestoreService extends ChangeNotifier {
       await user.updateDisplayName(data['displayName']);
     }
     notifyListeners();
+  }
+  Future<void> setHomeLocation(double latitude, double longitude, String? neighborhoodId) async {
+    if (_uid == null) return;
+    await _usersCol.doc(_uid).update({
+      'homeLatitude': latitude,
+      'homeLongitude': longitude,
+      'homeNeighborhoodId': neighborhoodId,
+    });
+    notifyListeners();
+  }
+  // =========================================================================
+  // EMISSIONS LOGS
+  // =========================================================================
+  CollectionReference get _emissionsCol => _db.collection('user_emissions');
+
+  Future<void> logVehicleEmission({
+    required double totalEmissionGrams,
+    required String model,
+    required String year,
+    required double daysUsed,
+    required double hoursPerDay,
+  }) async {
+    if (_uid == null) return;
+    await _emissionsCol.add({
+      'userId': _uid,
+      'timestamp': FieldValue.serverTimestamp(),
+      'totalEmissionGrams': totalEmissionGrams,
+      'vehicleModel': model,
+      'vehicleYear': year,
+      'daysUsed': daysUsed,
+      'hoursPerDay': hoursPerDay,
+    });
+  }
+
+  Stream<QuerySnapshot> emissionsStream() {
+    if (_uid == null) return const Stream.empty();
+    return _emissionsCol
+        .where('userId', isEqualTo: _uid)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 
   // =========================================================================
@@ -119,8 +164,12 @@ class FirestoreService extends ChangeNotifier {
   // =========================================================================
   CollectionReference get _eventsCol => _db.collection('events');
 
-  Stream<List<CommunityEvent>> eventsStream() {
-    return _eventsCol
+  Stream<List<CommunityEvent>> eventsStream({String? neighborhoodId}) {
+    Query query = _eventsCol;
+    if (neighborhoodId != null) {
+      query = query.where('neighborhoodId', isEqualTo: neighborhoodId);
+    }
+    return query
         .orderBy('dateTime', descending: false)
         .snapshots()
         .map((snap) => snap.docs.map((d) {
@@ -135,6 +184,7 @@ class FirestoreService extends ChangeNotifier {
                 category: data['category'] ?? 'Social',
                 attendees: data['attendees'] ?? 0,
                 maxAttendees: data['maxAttendees'] ?? 20,
+                neighborhoodId: data['neighborhoodId'],
               );
             }).toList());
   }
@@ -149,9 +199,25 @@ class FirestoreService extends ChangeNotifier {
       'category': event.category,
       'attendees': event.attendees,
       'maxAttendees': event.maxAttendees,
+      'neighborhoodId': event.neighborhoodId,
+      'latitude': event.latitude,
+      'longitude': event.longitude,
       'createdBy': _uid,
       'joinedBy': <String>[],
     });
+
+    if (event.latitude != null && event.longitude != null) {
+      await addMapMarker(MapMarkerData(
+        id: '',
+        title: event.title,
+        description: event.description,
+        position: LatLng(event.latitude!, event.longitude!),
+        type: MarkerType.communityEvent,
+        timestamp: DateTime.now(),
+        reportedBy: event.organizer,
+        neighborhoodId: event.neighborhoodId,
+      ));
+    }
   }
 
   Future<void> toggleEventJoin(String eventId) async {
@@ -191,9 +257,15 @@ class FirestoreService extends ChangeNotifier {
   // RESOURCES & HOBBIES
   // =========================================================================
   CollectionReference get _resourcesCol => _db.collection('resources');
+  CollectionReference get _hobbiesCol => _db.collection('hobbies');
 
-  Stream<List<ResourceListing>> resourcesStream({bool? hobbiesOnly}) {
-    return _resourcesCol
+  Stream<List<ResourceListing>> resourcesStream({bool? hobbiesOnly, String? neighborhoodId}) {
+    Query query = hobbiesOnly == true ? _hobbiesCol : _resourcesCol;
+    if (neighborhoodId != null) {
+      query = query.where('neighborhoodId', isEqualTo: neighborhoodId);
+    }
+
+    return query
         .orderBy('postedAt', descending: true)
         .snapshots()
         .map((snap) {
@@ -211,6 +283,7 @@ class FirestoreService extends ChangeNotifier {
           ),
           isAvailable: data['isAvailable'] ?? true,
           postedAt: (data['postedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          neighborhoodId: data['neighborhoodId'],
         );
       }).toList();
 
@@ -232,7 +305,11 @@ class FirestoreService extends ChangeNotifier {
   }
 
   Future<void> addResource(ResourceListing resource) async {
-    await _resourcesCol.add({
+    final col = (resource.category == ResourceCategory.hobbies || resource.category == ResourceCategory.sports) 
+        ? _hobbiesCol 
+        : _resourcesCol;
+    
+    await col.add({
       'title': resource.title,
       'description': resource.description,
       'ownerName': resource.ownerName,
@@ -240,8 +317,117 @@ class FirestoreService extends ChangeNotifier {
       'category': resource.category.name,
       'isAvailable': resource.isAvailable,
       'postedAt': Timestamp.fromDate(resource.postedAt),
+      'neighborhoodId': resource.neighborhoodId,
+      'latitude': resource.latitude,
+      'longitude': resource.longitude,
       'createdBy': _uid,
     });
+
+    if (resource.latitude != null && resource.longitude != null) {
+      await addMapMarker(MapMarkerData(
+        id: '',
+        title: resource.title,
+        description: resource.description,
+        position: LatLng(resource.latitude!, resource.longitude!),
+        type: (resource.category == ResourceCategory.hobbies || resource.category == ResourceCategory.sports) ? MarkerType.hobby : MarkerType.sharedResource,
+        timestamp: DateTime.now(),
+        reportedBy: resource.ownerName,
+        neighborhoodId: resource.neighborhoodId,
+      ));
+    }
+  }
+
+  Future<List<CommunityEvent>> getUserEvents() async {
+    if (_uid == null) return [];
+    final snap = await _eventsCol.where('createdBy', isEqualTo: _uid).get();
+    return snap.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return CommunityEvent(
+        id: doc.id,
+        title: data['title'] ?? '',
+        description: data['description'] ?? '',
+        organizer: data['organizer'] ?? '',
+        dateTime: (data['dateTime'] as Timestamp).toDate(),
+        location: data['location'] ?? '',
+        category: data['category'] ?? 'Social',
+        attendees: data['attendees'] ?? 0,
+        maxAttendees: data['maxAttendees'] ?? 20,
+        neighborhoodId: data['neighborhoodId'],
+        latitude: data['latitude']?.toDouble(),
+        longitude: data['longitude']?.toDouble(),
+      );
+    }).toList();
+  }
+
+  Future<List<ResourceListing>> getUserResources() async {
+    if (_uid == null) return [];
+    final resSnap = await _resourcesCol.where('createdBy', isEqualTo: _uid).get();
+    final hobSnap = await _hobbiesCol.where('createdBy', isEqualTo: _uid).get();
+    
+    final List<ResourceListing> combined = [];
+    
+    for (var doc in resSnap.docs) {
+      combined.add(_parseResource(doc));
+    }
+    for (var doc in hobSnap.docs) {
+      combined.add(_parseResource(doc));
+    }
+    
+    return combined;
+  }
+
+  ResourceListing _parseResource(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return ResourceListing(
+      id: doc.id,
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      ownerName: data['ownerName'] ?? 'Unknown',
+      ownerAvatar: data['ownerAvatar'] ?? '',
+      category: ResourceCategory.values.firstWhere(
+        (c) => c.name == (data['category'] ?? 'tools'),
+        orElse: () => ResourceCategory.tools,
+      ),
+      isAvailable: data['isAvailable'] ?? true,
+      postedAt: (data['postedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      neighborhoodId: data['neighborhoodId'],
+    );
+  }
+
+  Future<List<FeedPost>> getUserFeedPosts() async {
+    if (_uid == null) return [];
+    final snap = await _feedCol.where('createdBy', isEqualTo: _uid).get();
+    return snap.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>;
+      return FeedPost(
+        id: doc.id,
+        authorName: data['authorName'] ?? 'Anonymous',
+        authorAvatar: data['authorAvatar'] ?? '',
+        content: data['content'] ?? '',
+        type: PostType.values.firstWhere(
+          (t) => t.name == (data['type'] ?? 'update'),
+          orElse: () => PostType.update,
+        ),
+        timestamp: (data['timestamp'] as Timestamp).toDate(),
+        likes: data['likes'] ?? 0,
+        comments: data['comments'] ?? 0,
+        location: data['location'],
+      );
+    }).toList();
+  }
+
+  Future<void> deleteUserPost(String docId, String type, {bool isHobby = false}) async {
+    if (type == 'event') {
+      await _eventsCol.doc(docId).delete();
+    } else if (type == 'resource') {
+      if (isHobby) {
+        await _hobbiesCol.doc(docId).delete();
+      } else {
+        await _resourcesCol.doc(docId).delete();
+      }
+    } else if (type == 'feed') {
+      await _feedCol.doc(docId).delete();
+    }
   }
 
   // =========================================================================
@@ -249,8 +435,12 @@ class FirestoreService extends ChangeNotifier {
   // =========================================================================
   CollectionReference get _feedCol => _db.collection('feed');
 
-  Stream<List<FeedPost>> feedStream() {
-    return _feedCol
+  Stream<List<FeedPost>> feedStream({String? neighborhoodId}) {
+    Query query = _feedCol;
+    if (neighborhoodId != null) {
+      query = query.where('neighborhoodId', isEqualTo: neighborhoodId);
+    }
+    return query
         .orderBy('timestamp', descending: true)
         .snapshots()
         .map((snap) => snap.docs.map((d) {
@@ -269,6 +459,7 @@ class FirestoreService extends ChangeNotifier {
                 likes: data['likes'] ?? 0,
                 comments: data['comments'] ?? 0,
                 location: data['location'],
+                neighborhoodId: data['neighborhoodId'],
               );
             }).toList());
   }
@@ -347,53 +538,84 @@ class FirestoreService extends ChangeNotifier {
   }
 
   // =========================================================================
-  // SEED — Populate Firestore with initial data (one-time)
+  // MAP MARKERS
   // =========================================================================
-  Future<void> seedIfEmpty() async {
-    // Check if events already seeded
-    final eventsSnap = await _eventsCol.limit(1).get();
-    if (eventsSnap.docs.isNotEmpty) return; // Already seeded
+  CollectionReference get _mapMarkersCol => _db.collection('map_markers');
 
-    debugPrint('FirestoreService: Seeding initial data...');
-
-    // Seed events
-    final events = [
-      CommunityEvent(id: '1', title: 'Morning Yoga in the Park', description: 'Free yoga session for all ages. Bring your own mat.', organizer: 'Wellness Circle', dateTime: DateTime.now().add(const Duration(days: 1, hours: 6)), location: 'Central Park Lawn', category: 'Health & Wellness', attendees: 18, maxAttendees: 30),
-      CommunityEvent(id: '2', title: 'Weekend Farmers Market', description: 'Fresh organic produce, homemade preserves, artisan bread.', organizer: 'Green Earth Co-op', dateTime: DateTime.now().add(const Duration(days: 2, hours: 7)), location: 'Community Ground', category: 'Market', attendees: 45, maxAttendees: 100),
-      CommunityEvent(id: '3', title: 'Kids Art Workshop', description: 'Painting and craft for children ages 5-12. Materials provided.', organizer: 'Creative Minds Studio', dateTime: DateTime.now().add(const Duration(days: 3, hours: 10)), location: 'Community Hall - Room B', category: 'Education', attendees: 12, maxAttendees: 15),
-      CommunityEvent(id: '4', title: 'Neighborhood Cleanup Drive', description: 'Monthly cleanup. Gloves, bags, and refreshments provided.', organizer: 'Clean Streets Initiative', dateTime: DateTime.now().add(const Duration(days: 5, hours: 8)), location: 'Starting Point: Main Gate', category: 'Civic', attendees: 22, maxAttendees: 50),
-    ];
-    for (final e in events) {
-      await addEvent(e);
+  Stream<List<MapMarkerData>> mapMarkersStream({String? neighborhoodId}) {
+    Query query = _mapMarkersCol;
+    if (neighborhoodId != null) {
+      query = query.where('neighborhoodId', isEqualTo: neighborhoodId);
     }
+    return query
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snap) => snap.docs.map((d) {
+              final data = d.data()! as Map<String, dynamic>;
+              return MapMarkerData(
+                id: d.id,
+                title: data['title'] ?? '',
+                description: data['description'] ?? '',
+                position: LatLng(data['lat'] ?? 0.0, data['lng'] ?? 0.0),
+                type: MarkerType.values.firstWhere(
+                  (t) => t.name == (data['type'] ?? 'accident'),
+                  orElse: () => MarkerType.accident,
+                ),
+                timestamp: (data['timestamp'] as Timestamp).toDate(),
+                reportedBy: data['reportedBy'] ?? 'Unknown',
+                neighborhoodId: data['neighborhoodId'],
+              );
+            }).toList());
+  }
 
-    // Seed resources
-    final resources = [
-      ResourceListing(id: '1', title: 'Power Drill & Bit Set', description: 'Bosch cordless drill available for borrowing.', ownerName: 'Suresh P.', ownerAvatar: 'SP', category: ResourceCategory.tools, isAvailable: true, postedAt: DateTime.now().subtract(const Duration(days: 2))),
-      ResourceListing(id: '2', title: 'Guitar Lessons', description: 'Free acoustic guitar lessons for beginners on weekends.', ownerName: 'Aditya M.', ownerAvatar: 'AM', category: ResourceCategory.skills, isAvailable: true, postedAt: DateTime.now().subtract(const Duration(days: 1))),
-      ResourceListing(id: '3', title: 'Photography Walk Group', description: 'Looking for fellow photography enthusiasts for weekend walks.', ownerName: 'Kavya S.', ownerAvatar: 'KS', category: ResourceCategory.hobbies, isAvailable: true, postedAt: DateTime.now().subtract(const Duration(days: 3))),
-      ResourceListing(id: '4', title: 'Book Collection - Fiction', description: '50+ novels available for exchange. Mostly literary fiction.', ownerName: 'Nandini R.', ownerAvatar: 'NR', category: ResourceCategory.books, isAvailable: true, postedAt: DateTime.now().subtract(const Duration(days: 5))),
-      ResourceListing(id: '5', title: 'Badminton Partner Wanted', description: 'Looking for a regular badminton partner. Community court 6-7 PM.', ownerName: 'Ajay T.', ownerAvatar: 'AT', category: ResourceCategory.sports, isAvailable: true, postedAt: DateTime.now().subtract(const Duration(days: 1))),
-    ];
-    for (final r in resources) {
-      await addResource(r);
-    }
+  Future<void> addMapMarker(MapMarkerData marker) async {
+    await _mapMarkersCol.add({
+      'title': marker.title,
+      'description': marker.description,
+      'lat': marker.position.latitude,
+      'lng': marker.position.longitude,
+      'type': marker.type.name,
+      'timestamp': Timestamp.fromDate(marker.timestamp),
+      'reportedBy': marker.reportedBy,
+      'neighborhoodId': marker.neighborhoodId,
+      'createdBy': _uid,
+    });
+  }
 
-    // Seed feed posts
-    final posts = [
-      {'authorName': 'Meera Joshi', 'authorAvatar': 'MJ', 'content': 'Water supply will be disrupted tomorrow from 10 AM to 4 PM in Block C and D. Please store water.', 'type': 'alert', 'likes': 34, 'comments': 12, 'location': 'Block C & D'},
-      {'authorName': 'Arjun Nair', 'authorAvatar': 'AN', 'content': 'Does anyone have a ladder I could borrow for the weekend? Need to fix my terrace railing.', 'type': 'helpRequest', 'likes': 8, 'comments': 5, 'location': 'Sector 4'},
-      {'authorName': 'Lakshmi Reddy', 'authorAvatar': 'LR', 'content': 'The new pedestrian crossing near the school on 3rd Main has been completed! Great work.', 'type': 'news', 'likes': 67, 'comments': 15, 'location': '3rd Main Road'},
-      {'authorName': 'Vikram Singh', 'authorAvatar': 'VS', 'content': 'Stray dog pack alert near the park entrance on 7th Cross. Please be careful.', 'type': 'alert', 'likes': 45, 'comments': 22, 'location': '7th Cross Park'},
-      {'authorName': 'Deepa Menon', 'authorAvatar': 'DM', 'content': 'Started a small herb garden on my balcony! Happy to share basil and mint saplings.', 'type': 'update', 'likes': 52, 'comments': 18, 'location': null},
-    ];
-    for (final p in posts) {
-      await _feedCol.add({
-        ...p,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-    }
+  Future<void> addReportAndFeed({
+    required String? neighborhoodId,
+    required MapMarkerData markerData,
+    required FeedPost feedData,
+  }) async {
+    final batch = _db.batch();
 
-    debugPrint('FirestoreService: Seeding complete.');
+    final markerRef = _mapMarkersCol.doc();
+    batch.set(markerRef, {
+      'title': markerData.title,
+      'description': markerData.description,
+      'lat': markerData.position.latitude,
+      'lng': markerData.position.longitude,
+      'type': markerData.type.name,
+      'timestamp': Timestamp.fromDate(markerData.timestamp),
+      'reportedBy': markerData.reportedBy,
+      'neighborhoodId': neighborhoodId,
+      'createdBy': _uid,
+    });
+
+    final feedRef = _feedCol.doc();
+    batch.set(feedRef, {
+      'authorName': feedData.authorName,
+      'authorAvatar': feedData.authorAvatar,
+      'content': feedData.content,
+      'type': feedData.type.name,
+      'timestamp': Timestamp.fromDate(feedData.timestamp),
+      'likes': feedData.likes,
+      'comments': feedData.comments,
+      'location': feedData.location,
+      'neighborhoodId': neighborhoodId,
+      'createdBy': _uid,
+    });
+
+    await batch.commit();
   }
 }

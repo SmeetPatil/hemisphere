@@ -4,7 +4,8 @@ import '../../theme/app_theme.dart';
 import 'report_form_screen.dart';
 import 'report_confirmation_screen.dart'; // We can use or create a new result screen
 import '../../services/ml_service.dart';
-import '../../data/dummy_data.dart';
+import '../../services/firestore_service.dart';
+import '../../providers/map_provider.dart';
 import '../../models/map_marker.dart';
 import '../../models/feed_post.dart';
 import 'package:latlong2/latlong.dart';
@@ -112,70 +113,81 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
     );
   }
 
-  void _publishDummyData(String result) {
+  Future<void> _publishDummyData(String result) async {
+    final neighborhoodId = MapProvider.instance.currentNeighborhoodId;
+
     if (widget.reportType == ReportType.accident) {
       if (result == 'accident') {
-        DummyData.mapMarkers.insert(0, MapMarkerData(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: 'Accident Reported',
-          description: widget.description.isNotEmpty ? widget.description : 'Accident near your location. Emergency services alerted.',
-          position: LatLng(widget.latitude, widget.longitude),
-          type: MarkerType.accident,
-          timestamp: DateTime.now(),
-          reportedBy: 'You',
-        ));
-        DummyData.feedPosts.insert(0, FeedPost(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          authorName: 'System Alert',
-          authorAvatar: 'SA',
-          content: 'Accident reported at coordinates (${widget.latitude.toStringAsFixed(4)}, ${widget.longitude.toStringAsFixed(4)}). Emergency services and nearby hospitals have been dummied notified. Please avoid this route if possible.',
-          type: PostType.alert,
-          timestamp: DateTime.now(),
-          likes: 0,
-          comments: 0,
-        ));
+        await FirestoreService.instance.addReportAndFeed(
+          neighborhoodId: neighborhoodId,
+          markerData: MapMarkerData(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: 'Accident Reported',
+            description: widget.description.isNotEmpty ? widget.description : 'Accident near your location. Emergency services alerted.',
+            position: LatLng(widget.latitude, widget.longitude),
+            type: MarkerType.accident,
+            timestamp: DateTime.now(),
+            reportedBy: 'You',
+          ),
+          feedData: FeedPost(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            authorName: 'System Alert',
+            authorAvatar: 'SA',
+            content: 'Accident reported at coordinates (${widget.latitude.toStringAsFixed(4)}, ${widget.longitude.toStringAsFixed(4)}). Emergency services and nearby hospitals have been notified. Please avoid this route if possible.',
+            type: PostType.alert,
+            timestamp: DateTime.now(),
+            likes: 0,
+            comments: 0,
+          ),
+        );
       } else if (result == 'construction') {
-        DummyData.mapMarkers.insert(0, MapMarkerData(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: 'Construction Ongoing',
-          description: widget.description.isNotEmpty ? widget.description : 'Construction work. Alternative routes suggested.',
-          position: LatLng(widget.latitude, widget.longitude),
-          type: MarkerType.accident, // Reusing accident style or default
-          timestamp: DateTime.now(),
-          reportedBy: 'You',
-        ));
-        DummyData.feedPosts.insert(0, FeedPost(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          authorName: 'System Alert',
-          authorAvatar: 'SA',
-          content: 'Construction work detected at (${widget.latitude.toStringAsFixed(4)}, ${widget.longitude.toStringAsFixed(4)}). Alternative route suggestion activated to reduce neighborhood traffic.',
-          type: PostType.alert,
-          timestamp: DateTime.now(),
-          likes: 0,
-          comments: 0,
-        ));
+        await FirestoreService.instance.addReportAndFeed(
+          neighborhoodId: neighborhoodId,
+          markerData: MapMarkerData(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: 'Construction Ongoing',
+            description: widget.description.isNotEmpty ? widget.description : 'Construction work. Alternative routes suggested.',
+            position: LatLng(widget.latitude, widget.longitude),
+            type: MarkerType.roadConstruction,
+            timestamp: DateTime.now(),
+            reportedBy: 'You',
+          ),
+          feedData: FeedPost(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            authorName: 'System Alert',
+            authorAvatar: 'SA',
+            content: 'Construction work detected at (${widget.latitude.toStringAsFixed(4)}, ${widget.longitude.toStringAsFixed(4)}). Alternative route suggestion activated to reduce neighborhood traffic.',
+            type: PostType.alert,
+            timestamp: DateTime.now(),
+            likes: 0,
+            comments: 0,
+          ),
+        );
       }
     } else if (widget.reportType == ReportType.waste) {
       if (result == 'garbage') {
-        DummyData.mapMarkers.insert(0, MapMarkerData(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: 'Waste Dump Reported',
-          description: widget.description.isNotEmpty ? widget.description : 'Solid waste recorded. BMC notified.',
-          position: LatLng(widget.latitude, widget.longitude),
-          type: MarkerType.wasteCollection,
-          timestamp: DateTime.now(),
-          reportedBy: 'You',
-        ));
-        DummyData.feedPosts.insert(0, FeedPost(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          authorName: 'System Alert',
-          authorAvatar: 'SA',
-          content: 'Garbage dump reported and geotagged at (${widget.latitude.toStringAsFixed(4)}, ${widget.longitude.toStringAsFixed(4)}). A cleanup request has been sent to the municipality (BMC).',
-          type: PostType.news,
-          timestamp: DateTime.now(),
-          likes: 0,
-          comments: 0,
-        ));
+        await FirestoreService.instance.addReportAndFeed(
+          neighborhoodId: neighborhoodId,
+          markerData: MapMarkerData(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: 'Waste Dump Reported',
+            description: widget.description.isNotEmpty ? widget.description : 'Solid waste recorded. BMC notified.',
+            position: LatLng(widget.latitude, widget.longitude),
+            type: MarkerType.wasteCollection,
+            timestamp: DateTime.now(),
+            reportedBy: 'You',
+          ),
+          feedData: FeedPost(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            authorName: 'System Alert',
+            authorAvatar: 'SA',
+            content: 'Garbage dump reported and geotagged at (${widget.latitude.toStringAsFixed(4)}, ${widget.longitude.toStringAsFixed(4)}). A cleanup request has been sent to the municipality (BMC).',
+            type: PostType.news,
+            timestamp: DateTime.now(),
+            likes: 0,
+            comments: 0,
+          ),
+        );
       }
     }
   }

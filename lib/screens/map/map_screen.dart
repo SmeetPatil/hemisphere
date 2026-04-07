@@ -5,8 +5,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import '../../data/dummy_data.dart';
+import '../../services/firestore_service.dart';
+import '../../providers/map_provider.dart';
 import '../../models/map_marker.dart';
+import '../../models/neighborhood.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/marker_info_sheet.dart';
 
@@ -35,7 +37,6 @@ class _MapScreenState extends State<MapScreen>
   LatLng? _userLocation;
   bool _loadingLocation = false;
   bool _isSearchBarActive = false;
-  bool _isLegendExpanded = false;
   List<_GeoResult> _searchResults = [];
   bool _searchLoading = false;
   String? _searchError;
@@ -45,10 +46,6 @@ class _MapScreenState extends State<MapScreen>
   // Pulse animation for user dot
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
-
-  List<MapMarkerData> get _filteredMarkers => DummyData.mapMarkers
-      .where((m) => _activeFilters.contains(m.type))
-      .toList();
 
   @override
   void initState() {
@@ -60,7 +57,17 @@ class _MapScreenState extends State<MapScreen>
     _pulseAnim = Tween<double>(begin: 0.8, end: 1.4).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-    // Don't auto-fetch location on init — user taps the FAB to request it
+    
+    MapProvider.instance.addListener(_onMapProviderChanged);
+    
+    // Auto-fetch location on map screen load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchLocation();
+    });
+  }
+
+  void _onMapProviderChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -70,6 +77,7 @@ class _MapScreenState extends State<MapScreen>
     _searchFocus.dispose();
     _searchDebounce?.cancel();
     _locationSub?.cancel();
+    MapProvider.instance.removeListener(_onMapProviderChanged);
     super.dispose();
   }
 
@@ -145,12 +153,97 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  void _centerOnDefault() {
-    _mapController.move(
-        LatLng(DummyData.defaultLat, DummyData.defaultLng), 14.0);
+  Future<void> _handleHomeButton() async {
+    final profile = await FirestoreService.instance.getProfile();
+    final hasHome = profile != null && profile['homeLatitude'] != null;
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Home Location',
+                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              if (hasHome)
+                Text(
+                  'You have a Home location saved.',
+                  style: TextStyle(color: Colors.grey.shade600),
+                  textAlign: TextAlign.center,
+                )
+              else
+                Text(
+                  'You have no Home location saved.',
+                  style: TextStyle(color: Colors.grey.shade600),
+                  textAlign: TextAlign.center,
+                ),
+              const SizedBox(height: 24),
+              if (hasHome)
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.my_location),
+                  label: const Text('Center on Home'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.green,
+                    foregroundColor: AppColors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    if (profile['homeLatitude'] != null && profile['homeLongitude'] != null) {
+                      _mapController.move(
+                        LatLng(profile['homeLatitude'], profile['homeLongitude']),
+                        15.0,
+                      );
+                    }
+                  },
+                ),
+              if (hasHome) const SizedBox(height: 12),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.save),
+                label: Text(hasHome ? 'Update Home to Current Map Center' : 'Set Current Map Center as Home'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppColors.green),
+                  foregroundColor: AppColors.green,
+                ),
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final center = _mapController.camera.center;
+                  final nbhd = MumbaiNeighborhoods.findNeighborhoodFor(center);
+                  
+                  await FirestoreService.instance.setHomeLocation(
+                    center.latitude,
+                    center.longitude,
+                    nbhd?.id,
+                  );
+                  
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Home Location Saved Successfully!')),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
-  // ── Search via OSM Nominatim ──────────────────────────────────────────────
+  // ── Search via OSM Nominatim ────────────────────────────────────────────── 
 
   void _onSearchChanged(String query) {
     _searchDebounce?.cancel();
@@ -247,17 +340,87 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  void _toggleFilter(MarkerType type) {
-    setState(() {
-      if (_activeFilters.contains(type)) {
-        if (_activeFilters.length > 1) _activeFilters.remove(type);
-      } else {
-        _activeFilters.add(type);
-      }
-    });
+  void _showFilterSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: context.h.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Map Filters', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary)),
+                        IconButton(
+                          icon: Icon(Icons.close, color: context.h.iconSubtle),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 10,
+                      children: MarkerType.values.map((type) {
+                        final isActive = _activeFilters.contains(type);
+                        final dummy = MapMarkerData(
+                          id: '', title: '', description: '',
+                          position: LatLng(0, 0), type: type, timestamp: DateTime.now(),
+                          reportedBy: '',
+                        );
+                        return FilterChip(
+                          selected: isActive,
+                          onSelected: (_) {
+                            // Update modal state
+                            setModalState(() {
+                              if (_activeFilters.contains(type)) {
+                                if (_activeFilters.length > 1) _activeFilters.remove(type);
+                              } else {
+                                _activeFilters.add(type);
+                              }
+                            });
+                            // Update underlying map state
+                            setState(() {});
+                          },
+                          label: Text(dummy.typeLabel),
+                          labelStyle: AppTextStyles.caption.copyWith(
+                            color: isActive ? AppColors.black : context.h.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          backgroundColor: context.h.surface.withValues(alpha: 0.9),
+                          selectedColor: dummy.color,
+                          checkmarkColor: AppColors.black,
+                          side: BorderSide(
+                              color: isActive ? Colors.transparent : context.h.divider),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          visualDensity: VisualDensity.compact,
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   void _showSnack(String msg, {bool isError = false}) {
     if (!mounted) return;
@@ -288,7 +451,7 @@ class _MapScreenState extends State<MapScreen>
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter: LatLng(DummyData.defaultLat, DummyData.defaultLng),
+            initialCenter: const LatLng(19.0760, 72.8777),
             initialZoom: 14.0,
             minZoom: 4.0,
             maxZoom: 19.0,
@@ -303,63 +466,70 @@ class _MapScreenState extends State<MapScreen>
               tileBuilder: null, // Always use light mode for map tiles
             ),
             // Incident / Event Markers
-            MarkerLayer(
-              markers: [
-                // User location marker
-                if (_userLocation != null)
-                  Marker(
-                    point: _userLocation!,
-                    width: 52,
-                    height: 52,
-                    child: AnimatedBuilder(
-                      animation: _pulseAnim,
-                      builder: (_, child) {
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 44 * _pulseAnim.value,
-                              height: 44 * _pulseAnim.value,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0x331E88E5),
-                              ),
-                            ),
-                            Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: const Color(0xFF1E88E5),
-                                border: Border.all(
-                                    color: Colors.white, width: 2.5),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x441E88E5),
-                                    blurRadius: 6,
-                                    spreadRadius: 2,
+            StreamBuilder<List<MapMarkerData>>(
+              stream: FirestoreService.instance.mapMarkersStream(neighborhoodId: MapProvider.instance.currentNeighborhoodId),
+              builder: (context, snapshot) {
+                final allMarkers = snapshot.data ?? [];
+                final filtered = allMarkers.where((m) => _activeFilters.contains(m.type)).toList();
+                return MarkerLayer(
+                  markers: [
+                    // User location marker
+                    if (_userLocation != null)
+                      Marker(
+                        point: _userLocation!,
+                        width: 52,
+                        height: 52,
+                        child: AnimatedBuilder(
+                          animation: _pulseAnim,
+                          builder: (_, child) {
+                            return Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Container(
+                                  width: 44 * _pulseAnim.value,
+                                  height: 44 * _pulseAnim.value,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Color(0x331E88E5),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                // Incident markers
-                ..._filteredMarkers.map((m) {
-                  return Marker(
-                    point: m.position,
-                    width: 44,
-                    height: 44,
-                    child: GestureDetector(
-                      onTap: () => _showMarkerInfo(m),
-                      child: _MapPin(marker: m),
-                    ),
-                  );
-                }),
-              ],
+                                ),
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: const Color(0xFF1E88E5),
+                                    border: Border.all(
+                                        color: Colors.white, width: 2.5),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x441E88E5),
+                                        blurRadius: 6,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    // Incident markers
+                    ...filtered.map((m) {
+                      return Marker(
+                        point: m.position,
+                        width: 44,
+                        height: 44,
+                        child: GestureDetector(
+                          onTap: () => _showMarkerInfo(m),
+                          child: _MapPin(marker: m),
+                        ),
+                      );
+                    }),
+                  ],
+                );
+              }
             ),
           ],
         ),
@@ -422,15 +592,18 @@ class _MapScreenState extends State<MapScreen>
                         ),
                       )
                     else
-                      Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.yellow,
-                          borderRadius: BorderRadius.circular(10),
+                      GestureDetector(
+                        onTap: _showFilterSheet,
+                        child: Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.yellow,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.tune_rounded,
+                              size: 18, color: AppColors.black),
                         ),
-                        child: const Icon(Icons.tune_rounded,
-                            size: 18, color: AppColors.black),
                       ),
                   ],
                 ),
@@ -529,59 +702,6 @@ class _MapScreenState extends State<MapScreen>
           ),
         ),
 
-        // ── Filter Chips ──────────────────────────────────────────────────
-        if (!_isSearchBarActive)
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 66,
-            left: 0,
-            right: 0,
-            child: SizedBox(
-              height: 38,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                children: MarkerType.values.map((type) {
-                  final isActive = _activeFilters.contains(type);
-                  final dummy = MapMarkerData(
-                    id: '',
-                    title: '',
-                    description: '',
-                    position: LatLng(0, 0),
-                    type: type,
-                    timestamp: DateTime.now(),
-                    reportedBy: '',
-                  );
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      selected: isActive,
-                      onSelected: (_) => _toggleFilter(type),
-                      label: Text(dummy.typeLabel),
-                      labelStyle: AppTextStyles.caption.copyWith(
-                        color: isActive
-                            ? AppColors.black
-                            : context.h.textSecondary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      backgroundColor:
-                          context.h.surface.withValues(alpha: 0.9),
-                      selectedColor: dummy.color,
-                      checkmarkColor: AppColors.black,
-                      side: BorderSide(
-                          color: isActive
-                              ? Colors.transparent
-                              : context.h.divider),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          ),
-
         // ── Right-side FABs ───────────────────────────────────────────────
         Positioned(
           bottom: safeBottom + 4,
@@ -600,73 +720,9 @@ class _MapScreenState extends State<MapScreen>
               const SizedBox(height: 10),
               _MapActionButton(
                 icon: Icons.home_rounded,
-                onTap: _centerOnDefault,
+                onTap: _handleHomeButton,
               ),
             ],
-          ),
-        ),
-
-        // ── Legend ────────────────────────────────────────────────────────
-        Positioned(
-          bottom: safeBottom - 10,
-          left: 16,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _isLegendExpanded = !_isLegendExpanded;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: context.h.surface.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(color: context.h.cardShadow.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4)),
-                ],
-              ),
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeInOut,
-                alignment: Alignment.bottomLeft,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.layers_rounded, size: 18, color: context.h.textPrimary),
-                        const SizedBox(width: 8),
-                        Text(
-                          'LEGEND',
-                          style: AppTextStyles.caption.copyWith(
-                              fontWeight: FontWeight.w700, letterSpacing: 1),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          _isLegendExpanded ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
-                          size: 18,
-                          color: context.h.textSecondary,
-                        ),
-                      ],
-                    ),
-                    if (_isLegendExpanded) ...[
-                      const SizedBox(height: 12),
-                      const _LegendItem(color: AppColors.red, label: 'Accident'),
-                      const _LegendItem(color: AppColors.yellow, label: 'Waste'),
-                      const _LegendItem(color: AppColors.green, label: 'Event'),
-                      const _LegendItem(
-                          color: Color(0xFF2196F3), label: 'Resource'),
-                      const _LegendItem(
-                          color: Color(0xFF1E88E5), label: 'You'),
-                    ],
-                  ],
-                ),
-              ),
-            ),
           ),
         ),
 
@@ -763,31 +819,6 @@ class _MapActionButton extends StatelessWidget {
         child: Icon(icon,
             color: highlight ? AppColors.black : context.h.textPrimary,
             size: 22),
-      ),
-    );
-  }
-}
-
-class _LegendItem extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _LegendItem({required this.color, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 6),
-          Text(label, style: AppTextStyles.caption.copyWith(fontSize: 10)),
-        ],
       ),
     );
   }

@@ -9,6 +9,9 @@ class ResourceListing {
   final ResourceCategory category;
   final bool isAvailable;
   final DateTime postedAt;
+  final String? neighborhoodId;
+  final double? latitude;
+  final double? longitude;
 
   const ResourceListing({
     required this.id,
@@ -19,6 +22,9 @@ class ResourceListing {
     required this.category,
     required this.isAvailable,
     required this.postedAt,
+    this.neighborhoodId,
+    this.latitude,
+    this.longitude,
   });
 
   String get categoryLabel {

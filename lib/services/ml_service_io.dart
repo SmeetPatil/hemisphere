@@ -6,6 +6,7 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 class MLService {
   Interpreter? _safetyInterpreter;
   Interpreter? _garbageInterpreter;
+  Interpreter? _emissionsInterpreter;
 
   final List<String> _safetyClasses = ['accident', 'construction', 'normal'];
   final List<String> _garbageClasses = ['clean', 'garbage'];
@@ -16,6 +17,9 @@ class MLService {
           await Interpreter.fromAsset('assets/models/safety_model.tflite');
       _garbageInterpreter = await Interpreter.fromAsset(
         'assets/models/garbage_classification_model.tflite',
+      );
+      _emissionsInterpreter = await Interpreter.fromAsset(
+        'assets/models/emissions_model.tflite',
       );
     } catch (_) {
       // Keep null interpreters and return fallback labels in predict methods.
@@ -49,6 +53,49 @@ class MLService {
       return _getLabel(output[0], _garbageClasses);
     } catch (_) {
       return 'Prediction failed';
+    }
+  }
+
+  Future<double?> predictEmissions(
+      double engineSizeL, int cylinders, int fuelType, double daysUsed, double hoursPerDay) async {
+    if (_emissionsInterpreter == null) {
+      return null;
+    }
+
+    try {
+      // Normalization constants from training parameters
+      const double meanEngine = 3.1651;
+      const double stdEngine = 1.3593;
+      const double meanCylinders = 5.6234;
+      const double stdCylinders = 1.8341;
+
+      // Normalize continuous features
+      final normalizedEngine = (engineSizeL - meanEngine) / stdEngine;
+      final normalizedCyl = (cylinders - meanCylinders) / stdCylinders;
+
+      // Create input tensor [1, 3]
+      // Features: Engine Size, Cylinders, Fuel Type
+      final input = [
+        [normalizedEngine, normalizedCyl, fuelType.toDouble()]
+      ];
+
+      // Assuming model outputs a single continuous value [1, 1]
+      final output = List.filled(1 * 1, 0.0).reshape([1, 1]);
+      
+      _emissionsInterpreter!.run(input, output);
+      
+      final double co2PerKm = output[0][0];
+      
+      // Calculate total emissions based on hours and days
+      // Assuming avg speed of 30 km/h in neighborhood/city conditions
+      const double avgSpeedKmh = 30.0;
+      final double totalDistanceKm = daysUsed * hoursPerDay * avgSpeedKmh;
+      final double totalEmissionGrams = co2PerKm * totalDistanceKm;
+      
+      return totalEmissionGrams;
+    } catch (e) {
+      print('Emissions prediction error: \$e');
+      return null;
     }
   }
 
@@ -101,5 +148,6 @@ class MLService {
   void dispose() {
     _safetyInterpreter?.close();
     _garbageInterpreter?.close();
+    _emissionsInterpreter?.close();
   }
 }

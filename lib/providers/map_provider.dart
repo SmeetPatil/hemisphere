@@ -4,6 +4,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/neighborhood.dart';
+import '../services/firestore_service.dart';
+
 class NominatimResult {
   final String displayName;
   final double latitude;
@@ -18,6 +21,7 @@ class MapProvider extends ChangeNotifier {
   MapProvider._();
 
   LatLng? _userLocation;
+  Neighborhood? _currentNeighborhood;
   LocationStatus _locationStatus = LocationStatus.initial;
   List<NominatimResult> _searchResults = [];
   bool _isSearching = false;
@@ -28,6 +32,41 @@ class MapProvider extends ChangeNotifier {
   List<NominatimResult> get searchResults => _searchResults;
   bool get isSearching => _isSearching;
   String? get searchError => _searchError;
+  Neighborhood? get currentNeighborhood => _currentNeighborhood;
+  String? get currentNeighborhoodId => _currentNeighborhood?.id;
+
+  Future<void> _updateNeighborhood(LatLng position) async {
+    final newNbhd = MumbaiNeighborhoods.findNeighborhoodFor(position);
+    if (newNbhd != null) {
+      _currentNeighborhood = newNbhd;
+      notifyListeners();
+    } else {
+      // Fallback to home profile if out of bounds
+      final profile = await FirestoreService.instance.getProfile();
+      if (profile != null && profile['homeNeighborhoodId'] != null) {
+        final homeId = profile['homeNeighborhoodId'];
+        _currentNeighborhood = MumbaiNeighborhoods.regions.firstWhere(
+          (n) => n.id == homeId,
+          orElse: () => MumbaiNeighborhoods.regions.first, // or null
+        );
+      } else {
+         // Default if completely unset
+         _currentNeighborhood = null;
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> setHomeNeighborhood(LatLng location, String neighborhoodId) async {
+    await FirestoreService.instance.setHomeLocation(location.latitude, location.longitude, neighborhoodId);
+    if (_currentNeighborhood == null) {
+      _currentNeighborhood = MumbaiNeighborhoods.regions.firstWhere(
+        (n) => n.id == neighborhoodId,
+        orElse: () => MumbaiNeighborhoods.regions.first,
+      );
+      notifyListeners();
+    }
+  }
 
   /// Request location permission and get current position
   Future<LatLng?> requestAndGetLocation() async {
@@ -66,7 +105,7 @@ class MapProvider extends ChangeNotifier {
       );
       _userLocation = LatLng(position.latitude, position.longitude);
       _locationStatus = LocationStatus.granted;
-      notifyListeners();
+      await _updateNeighborhood(_userLocation!);
       return _userLocation;
     } catch (e) {
       _locationStatus = LocationStatus.denied;
@@ -82,9 +121,9 @@ class MapProvider extends ChangeNotifier {
         accuracy: LocationAccuracy.high,
         distanceFilter: 10,
       ),
-    ).map((pos) {
+    ).asyncMap((pos) async {
       _userLocation = LatLng(pos.latitude, pos.longitude);
-      notifyListeners();
+      await _updateNeighborhood(_userLocation!);
       return _userLocation!;
     });
   }

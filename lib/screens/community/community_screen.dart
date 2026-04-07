@@ -4,11 +4,13 @@ import 'package:intl/intl.dart';
 
 import '../../models/community_event.dart';
 import '../../models/resource_listing.dart';
+import '../../providers/map_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/event_card.dart';
 import '../../widgets/resource_card.dart';
 import 'chat_screen.dart';
+import 'package:geolocator/geolocator.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -21,7 +23,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  bool _showComposer = true;
+  bool _showComposer = false;
   int _composerType = 0;
 
   final _eventTitleController = TextEditingController();
@@ -89,6 +91,23 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Future<void> _submitComposer() async {
+    Position? currentPos;
+    try {
+      if (await Geolocator.isLocationServiceEnabled()) {
+        LocationPermission perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        if (perm == LocationPermission.whileInUse || perm == LocationPermission.always) {
+          currentPos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+          );
+        }
+      }
+    } catch (_) {
+      // Ignored: If location times out or can't be fetched, we proceed without coordinates
+    }
+
     if (_composerType == 0) {
       if (_eventTitleController.text.trim().isEmpty ||
           _eventDescController.text.trim().isEmpty ||
@@ -117,6 +136,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             : _eventCategoryController.text.trim(),
         attendees: 1,
         maxAttendees: int.tryParse(_eventMaxAttendeesController.text) ?? 20,
+        latitude: currentPos?.latitude,
+        longitude: currentPos?.longitude,
       );
 
       await FirestoreService.instance.addEvent(event);
@@ -142,6 +163,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         category: ResourceCategory.tools,
         isAvailable: true,
         postedAt: DateTime.now(),
+        latitude: currentPos?.latitude,
+        longitude: currentPos?.longitude,
       );
 
       await FirestoreService.instance.addResource(resource);
@@ -164,6 +187,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         category: ResourceCategory.hobbies,
         isAvailable: true,
         postedAt: DateTime.now(),
+        latitude: currentPos?.latitude,
+        longitude: currentPos?.longitude,
       );
 
       await FirestoreService.instance.addResource(hobby);
@@ -433,7 +458,8 @@ class _EventsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<CommunityEvent>>(
-      stream: FirestoreService.instance.eventsStream(),
+      stream: FirestoreService.instance.eventsStream(
+          neighborhoodId: MapProvider.instance.currentNeighborhoodId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: AppColors.yellow));
@@ -485,7 +511,9 @@ class _ResourcesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ResourceListing>>(
-      stream: FirestoreService.instance.resourcesStream(hobbiesOnly: false),
+      stream: FirestoreService.instance.resourcesStream(
+          hobbiesOnly: false,
+          neighborhoodId: MapProvider.instance.currentNeighborhoodId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: AppColors.yellow));
@@ -528,7 +556,9 @@ class _HobbiesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<List<ResourceListing>>(
-      stream: FirestoreService.instance.resourcesStream(hobbiesOnly: true),
+      stream: FirestoreService.instance.resourcesStream(
+          hobbiesOnly: true,
+          neighborhoodId: MapProvider.instance.currentNeighborhoodId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: AppColors.yellow));
@@ -633,29 +663,28 @@ class _MessageBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: context.h.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: context.h.divider),
+      ),
+      child: SizedBox(
         width: double.infinity,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: context.h.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.h.divider),
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          height: 38,
-          child: ElevatedButton.icon(
-            onPressed: onTap,
-            icon: const Icon(Icons.chat_rounded, size: 16),
-            label: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.yellow,
-              foregroundColor: AppColors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              textStyle: AppTextStyles.caption.copyWith(color: AppColors.black, fontWeight: FontWeight.w700),
-            ),
+        height: 44, // Increased height to prevent cutoff
+        child: ElevatedButton.icon(
+          onPressed: onTap,
+          icon: const Icon(Icons.chat_rounded, size: 18),
+          label: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            backgroundColor: AppColors.yellow,
+            foregroundColor: AppColors.black,
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            textStyle: AppTextStyles.caption.copyWith(color: AppColors.black, fontWeight: FontWeight.w700),
           ),
         ),
       ),

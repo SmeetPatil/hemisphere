@@ -9,6 +9,9 @@ class CommunityEvent {
   final int attendees;
   final int maxAttendees;
   final String? imageUrl;
+  final String? neighborhoodId;
+  final double? latitude;
+  final double? longitude;
 
   const CommunityEvent({
     required this.id,
@@ -21,6 +24,9 @@ class CommunityEvent {
     required this.attendees,
     required this.maxAttendees,
     this.imageUrl,
+    this.neighborhoodId,
+    this.latitude,
+    this.longitude,
   });
 
   bool get isFull => attendees >= maxAttendees;

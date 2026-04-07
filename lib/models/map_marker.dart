@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
-enum MarkerType { accident, wasteCollection, communityEvent, sharedResource }
+enum MarkerType { accident, wasteCollection, communityEvent, sharedResource, roadConstruction, hobby }
 
 class MapMarkerData {
   final String id;
@@ -12,6 +12,7 @@ class MapMarkerData {
   final DateTime timestamp;
   final String? imageUrl;
   final String reportedBy;
+  final String? neighborhoodId;
 
   const MapMarkerData({
     required this.id,
@@ -22,6 +23,7 @@ class MapMarkerData {
     required this.timestamp,
     this.imageUrl,
     required this.reportedBy,
+    this.neighborhoodId,
   });
 
   IconData get icon {
@@ -34,6 +36,10 @@ class MapMarkerData {
         return Icons.event_rounded;
       case MarkerType.sharedResource:
         return Icons.handshake_rounded;
+      case MarkerType.roadConstruction:
+        return Icons.construction_rounded;
+      case MarkerType.hobby:
+        return Icons.palette_rounded;
     }
   }
 
@@ -47,6 +53,10 @@ class MapMarkerData {
         return const Color(0xFF43A047);
       case MarkerType.sharedResource:
         return const Color(0xFF2196F3);
+      case MarkerType.roadConstruction:
+        return const Color(0xFF9C27B0); // Purple
+      case MarkerType.hobby:
+        return const Color(0xFFFF9800); // Orange
     }
   }
 
@@ -60,6 +70,10 @@ class MapMarkerData {
         return 'Community Event';
       case MarkerType.sharedResource:
         return 'Shared Resource';
+      case MarkerType.roadConstruction:
+        return 'Road Construction';
+      case MarkerType.hobby:
+        return 'Hobby';
     }
   }
 }

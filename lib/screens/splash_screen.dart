@@ -39,8 +39,6 @@ class _SplashScreenState extends State<SplashScreen>
         await FirestoreService.instance.ensureProfile().timeout(
               const Duration(seconds: 8),
             );
-        // Seed in background — don't block navigation
-        FirestoreService.instance.seedIfEmpty();
       } catch (e) {
         debugPrint('Splash Firestore init error: $e');
       }
