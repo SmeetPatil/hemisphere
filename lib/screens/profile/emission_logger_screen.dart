@@ -5,6 +5,7 @@ import '../../services/emissions_api_service.dart';
 import '../../services/ml_service_io.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import 'emission_result_screen.dart';
 
 class EmissionLoggerScreen extends StatefulWidget {
   const EmissionLoggerScreen({super.key});
@@ -19,12 +20,26 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
   
   final _modelCtrl = TextEditingController();
   final _yearCtrl = TextEditingController();
+  final _modelFocus = FocusNode();
+  final _yearFocus = FocusNode();
+  String _lastModelQuery = '';
   final _daysUsedCtrl = TextEditingController();
   int? _selectedHours;
   int? _selectedMinutes;
 
+  List<Map<String, dynamic>> _cachedModels = [];
+  List<String> _availableYears = [];
+  
   bool _isLoading = false;
   String _statusMessage = '';
+
+  String _capitalizeWords(String input) {
+    if (input.isEmpty) return input;
+    return input.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
 
   @override
   void initState() {
@@ -40,6 +55,8 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
   void dispose() {
     _modelCtrl.dispose();
     _yearCtrl.dispose();
+    _modelFocus.dispose();
+    _yearFocus.dispose();
     _daysUsedCtrl.dispose();
     _mlService.dispose();
     super.dispose();
@@ -60,15 +77,15 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
 
     setState(() {
       _isLoading = true;
-      _statusMessage = 'Extracting engine specs via AI...';
+      _statusMessage = 'Fetching vehicle specifications...';
     });
 
-    // 1. Fetch AI parameters
+    // 1. Fetch parameters from API
     final specs = await _apiService.getVehicleSpecs(modelInput, yearInput);
     if (specs == null) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to retrieve vehicle specs via AI')),
+        const SnackBar(content: Text('Failed to retrieve vehicle specs. Check Make/Model.')),
       );
       return;
     }
@@ -109,29 +126,15 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
       );
 
       setState(() => _isLoading = false);
-      
-      final kg = (totalEmissions / 1000).toStringAsFixed(2);
-      
+
+      final double kg = totalEmissions / 1000;
+
       if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: context.h.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Logging Success', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary)),
-          content: Text(
-            'Your estimated emission is $kg kg of CO2.\nData has been logged to your account successfully.',
-            style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx); // close dialog
-                Navigator.pop(context, true); // go back
-              },
-              child: const Text('Ok', style: TextStyle(color: AppColors.green, fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-          ],
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EmissionResultScreen(emissionKg: kg),
         ),
       );
     } catch (e) {
@@ -177,11 +180,11 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.psychology_rounded, color: AppColors.green, size: 32),
+                        const Icon(Icons.directions_car_rounded, color: AppColors.green, size: 32),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Text(
-                            'Estimate your CO2 emissions based on your car specifications and usage using our AI-ML engine.',
+                            'Estimate your CO2 emissions based on your car specifications and usage using our accurate database and ML engine.',
                             style: AppTextStyles.bodySmall.copyWith(color: context.h.textPrimary, height: 1.4),
                           ),
                         ),
@@ -191,11 +194,113 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
                   const SizedBox(height: 32),
                   
                   _buildInputLabel('Vehicle Model'),
-                  _buildTextField(_modelCtrl, 'e.g. Honda Civic'),
+                  RawAutocomplete<String>(
+                    textEditingController: _modelCtrl,
+                    focusNode: _modelFocus,
+                    optionsBuilder: (TextEditingValue textEditingValue) async {
+                      String query = textEditingValue.text;
+                      if (query.length < 3) return const Iterable<String>.empty();
+                      
+                      _lastModelQuery = query;
+                      await Future.delayed(const Duration(milliseconds: 250));
+                      if (_lastModelQuery != query) return const Iterable<String>.empty();
+                      
+                      final results = await _apiService.searchVehicles(query);
+                      _cachedModels = results;
+                      final uniqueNames = results.map((e) => _capitalizeWords(e['name'].toString())).toSet().toList();
+                      return uniqueNames;
+                    },
+                    onSelected: (String selection) {
+                      _modelCtrl.text = selection;
+                      final matched = _cachedModels.where((e) => _capitalizeWords(e['name'].toString()) == selection).toList();
+                      _availableYears = matched.map((e) => e['year'].toString()).toSet().toList();
+                      _availableYears.sort((a,b) => b.compareTo(a)); // Descending
+                      if (_availableYears.isNotEmpty && _yearCtrl.text.isEmpty) {
+                        _yearCtrl.text = _availableYears.first;
+                      }
+                      setState(() {});
+                    },
+                    fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                      return _buildTextField(textEditingController, 'Search e.g. Honda Civic', focusNode: focusNode);
+                    },
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4.0,
+                          borderRadius: BorderRadius.circular(14),
+                          color: context.h.card,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: 250, maxWidth: MediaQuery.of(context).size.width - 40),
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              separatorBuilder: (_, __) => Divider(color: context.h.divider, height: 1),
+                              itemBuilder: (BuildContext context, int index) {
+                                final option = options.elementAt(index);
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () => onSelected(option),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(option, style: AppTextStyles.bodyLarge.copyWith(color: context.h.textPrimary)),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 20),
                   
                   _buildInputLabel('Make Year'),
-                  _buildTextField(_yearCtrl, 'e.g. 2015', isNumber: true),
+                  RawAutocomplete<String>(
+                    textEditingController: _yearCtrl,
+                    focusNode: _yearFocus,
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (_availableYears.isEmpty) return const Iterable<String>.empty();
+                      return _availableYears.where((y) => y.contains(textEditingValue.text));
+                    },
+                    onSelected: (String selection) {
+                      _yearCtrl.text = selection;
+                    },
+                    fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                      return _buildTextField(textEditingController, 'Type or select a year', isNumber: true, focusNode: focusNode);
+                    },
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4.0,
+                          borderRadius: BorderRadius.circular(14),
+                          color: context.h.card,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(maxHeight: 200, maxWidth: MediaQuery.of(context).size.width - 40),
+                            child: ListView.separated(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              separatorBuilder: (_, __) => Divider(color: context.h.divider, height: 1),
+                              itemBuilder: (BuildContext context, int index) {
+                                final option = options.elementAt(index);
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () => onSelected(option),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(option, style: AppTextStyles.bodyLarge.copyWith(color: context.h.textPrimary)),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   const SizedBox(height: 20),
 
                   _buildInputLabel('Days Used'),
@@ -256,9 +361,10 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String hint, {bool isNumber = false, bool allowDecimal = false}) {
+  Widget _buildTextField(TextEditingController controller, String hint, {bool isNumber = false, bool allowDecimal = false, FocusNode? focusNode}) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: isNumber ? TextInputType.numberWithOptions(decimal: allowDecimal) : TextInputType.text,
       inputFormatters: isNumber && !allowDecimal ? [FilteringTextInputFormatter.digitsOnly] : null,
       style: AppTextStyles.bodyLarge.copyWith(color: context.h.textPrimary),
