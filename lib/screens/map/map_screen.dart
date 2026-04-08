@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -542,20 +543,18 @@ class _MapScreenState extends State<MapScreen>
           child: Column(
             children: [
               // Input row
-              Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: context.h.surface.withValues(alpha: 0.97),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.h.cardShadow,
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                  child: Container(
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0B101A).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
                     ),
-                  ],
-                ),
-                child: Row(
+                    child: Row(
                   children: [
                     const SizedBox(width: 14),
                     Icon(Icons.search_rounded, color: context.h.iconSubtle),
@@ -607,6 +606,8 @@ class _MapScreenState extends State<MapScreen>
                       ),
                   ],
                 ),
+                  ),
+                ),
               ),
 
               // Search results dropdown
@@ -614,36 +615,35 @@ class _MapScreenState extends State<MapScreen>
                   (_searchResults.isNotEmpty ||
                       _searchLoading ||
                       _searchError != null))
-                Container(
-                  margin: const EdgeInsets.only(top: 4),
-                  constraints: const BoxConstraints(maxHeight: 240),
-                  decoration: BoxDecoration(
-                    color: context.h.surface,
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: context.h.cardShadow,
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: _searchLoading
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Center(
-                            child: SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2),
-                            ),
-                          ),
-                        )
-                      : _searchError != null
-                          ? Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                      child: Container(
+                        constraints: const BoxConstraints(maxHeight: 240),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0B101A).withValues(alpha: 0.85),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+                        ),
+                        child: _searchLoading
+                            ? const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 20),
+                                child: Center(
+                                  child: SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                ),
+                              )
+                            : _searchError != null
+                                ? Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Row(
                                 children: [
                                   Icon(Icons.search_off_rounded,
                                       size: 18,
@@ -697,6 +697,9 @@ class _MapScreenState extends State<MapScreen>
                                 );
                               },
                             ),
+                      ),
+                    ),
+                  ),
                 ),
             ],
           ),

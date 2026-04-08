@@ -1,8 +1,8 @@
+﻿import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
-import '../../theme/app_theme.dart';
 import '../home_screen.dart';
 import 'signup_screen.dart';
 import 'phone_auth_screen.dart';
@@ -21,16 +21,19 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   bool _obscurePassword = true;
 
+  static const Color backgroundDark = Color(0xFF0B101A);
+  static const Color accentYellow = Color(0xFFFFD700);
+  static const Color cardDark = Color(0xFF161F30);
+  static const Color textWhite = Color(0xFFFCFCFC);
+  static const Color textMuted = Color(0xFF94A3B8);
+  static const Color textDark = Color(0xFF0F172A);
+
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
-
-  // ---------------------------------------------------------------------------
-  // Auth actions
-  // ---------------------------------------------------------------------------
 
   Future<void> _signInEmail() async {
     if (!_formKey.currentState!.validate()) return;
@@ -82,269 +85,273 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: AppColors.red,
+        content: Text(message, style: const TextStyle(fontFamily: 'Satoshi')),
+        backgroundColor: Colors.redAccent,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Build
-  // ---------------------------------------------------------------------------
+  Widget _buildGlassInput({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: backgroundDark.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+          ),
+          child: TextFormField(
+            controller: controller,
+            obscureText: isPassword ? _obscurePassword : false,
+            keyboardType: keyboardType,
+            validator: validator,
+            style: const TextStyle(color: textWhite, fontFamily: 'Satoshi', fontSize: 16),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: textMuted.withValues(alpha: 0.8), fontFamily: 'Satoshi'),
+              prefixIcon: Icon(icon, color: textMuted, size: 20),
+              suffixIcon: isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: textWhite.withValues(alpha: 0.8),
+                        size: 20,
+                      ),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                    )
+                  : null,
+              border: InputBorder.none,
+              errorStyle: const TextStyle(height: 0.8),
+              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = context.isDark;
-    final colors = context.h;
+    final size = MediaQuery.of(context).size;
 
     return Scaffold(
-      backgroundColor: isDark ? colors.background : const Color(0xFFECE8D8),
+      backgroundColor: backgroundDark,
       body: Stack(
         children: [
-          // Yellow arc header
+          // Top Image Area (Extended slightly to 55% so glass at 45% overlaps it gracefully)
           Positioned(
             top: 0,
             left: 0,
             right: 0,
+            height: size.height * 0.55,
             child: Container(
-              height: 260,
               decoration: const BoxDecoration(
-                color: AppColors.yellow,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(130),
-                  bottomRight: Radius.circular(130),
+                image: DecorationImage(
+                  image: AssetImage('assets/images/loginpage.png'),
+                  fit: BoxFit.cover,
+                  alignment: Alignment.topCenter,
+                ),
+              ),
+              // Optional: slightly darken the bottom of the image behind the glass
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.transparent,
+                      backgroundDark.withValues(alpha: 0.5),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 390),
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
-                    decoration: BoxDecoration(
-                      color: isDark ? colors.card : const Color(0xFFF2F2F2),
-                      borderRadius: BorderRadius.circular(34),
-                      boxShadow: [
-                        BoxShadow(
-                          color: colors.cardShadow,
-                          blurRadius: 26,
-                          offset: const Offset(0, 16),
-                        ),
-                      ],
+
+          // App Name Heading
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            left: 0,
+            right: 0,
+            child: const Center(
+              child: Text(
+                'HemiSphere',
+                style: TextStyle(
+                  fontFamily: 'Clash Display',
+                  fontSize: 28,
+                  fontWeight: FontWeight.w600,
+                  color: accentYellow,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+          ),
+
+          // Bottom 50% section -> Container starts at 48% overlapping the image
+          Positioned(
+            top: size.height * 0.48,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: cardDark.withValues(alpha: 0.45), // Deep glassmorphism
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
+                    border: Border(
+                      top: BorderSide(color: accentYellow.withValues(alpha: 0.6), width: 1.5), // Yellow tinted glass border trim
                     ),
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(), // Prevent scrolling / bouncy edge
+                    padding: const EdgeInsets.fromLTRB(28, 24, 28, 12),
                     child: Form(
                       key: _formKey,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _BrandMark(isDark: isDark),
-                          const SizedBox(height: 18),
-                          Text(
-                            'Welcome Back',
-                            style: AppTextStyles.headlineLarge.copyWith(
-                              color:
-                                  isDark ? AppColors.white : AppColors.grey900,
+                          const Text(
+                            'Build a Better Community',
+                            style: TextStyle(
+                              fontFamily: 'Clash Display',
+                              fontSize: 32,
                               fontWeight: FontWeight.w700,
+                              color: textWhite,
+                              height: 1.1,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 6),
                           Text(
-                            'Sign in to continue',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: isDark
-                                  ? AppColors.grey400
-                                  : AppColors.grey600,
+                            'Log in to connect and engage.',
+                            style: TextStyle(
+                              fontFamily: 'Satoshi',
+                              fontSize: 15,
+                              color: textMuted,
                             ),
-                          ),
-                          const SizedBox(height: 22),
-
-                          // Email
-                          _buildField(
-                            controller: _emailController,
-                            label: 'Email',
-                            icon: Icons.mail_outline,
-                            isDark: isDark,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) {
-                                return 'Enter your email';
-                              }
-                              if (!v.contains('@')) return 'Invalid email';
-                              return null;
-                            },
                           ),
                           const SizedBox(height: 16),
 
-                          // Password
-                          _buildField(
-                            controller: _passwordController,
-                            label: 'Password',
-                            icon: Icons.lock_outline,
-                            isDark: isDark,
-                            obscureText: _obscurePassword,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) {
-                                return 'Enter your password';
-                              }
-                              return null;
-                            },
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                size: 18,
-                                color: isDark
-                                    ? AppColors.grey400
-                                    : AppColors.grey600,
-                              ),
-                              onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword),
-                            ),
+                          _buildGlassInput(
+                            controller: _emailController,
+                            hint: 'Email Address',
+                            icon: Icons.email_outlined,
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) => v!.isEmpty || !v.contains('@') ? 'Valid email' : null,
                           ),
-                          const SizedBox(height: 24),
-
-                          // Login button
+                          const SizedBox(height: 8),
+                          _buildGlassInput(
+                            controller: _passwordController,
+                            hint: 'Password',
+                            icon: Icons.lock_outline_rounded,
+                            isPassword: true,
+                            validator: (v) => v!.isEmpty ? 'Required' : null,
+                          ),
+                          
+                          const SizedBox(height: 16),
+                          
                           SizedBox(
                             width: double.infinity,
+                            height: 48,
                             child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: accentYellow,
+                                foregroundColor: backgroundDark,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
                               onPressed: _loading ? null : _signInEmail,
                               child: _loading
                                   ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: AppColors.black,
-                                      ),
+                                      width: 20, height: 20,
+                                      child: CircularProgressIndicator(color: backgroundDark, strokeWidth: 3),
                                     )
-                                  : Text(
-                                      'Login',
-                                      style:
-                                          AppTextStyles.buttonMedium.copyWith(
-                                        color: AppColors.black,
-                                        fontWeight: FontWeight.w700,
+                                  : const Text(
+                                      'Log In',
+                                      style: TextStyle(
+                                        fontFamily: 'Clash Display',
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
                                       ),
                                     ),
                             ),
                           ),
-                          const SizedBox(height: 14),
+                          
+                          const SizedBox(height: 12),
 
-                          // Divider "or"
                           Row(
                             children: [
-                              Expanded(
-                                child: Divider(
-                                  color: isDark
-                                      ? AppColors.grey700
-                                      : AppColors.grey300,
-                                ),
-                              ),
+                              Expanded(child: Divider(color: textWhite.withValues(alpha: 0.1), thickness: 1)),
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
-                                  'or continue with',
-                                  style: AppTextStyles.caption.copyWith(
-                                    color: isDark
-                                        ? AppColors.grey400
-                                        : const Color(0xFF9D9D9D),
-                                  ),
+                                  'Or continue with',
+                                  style: TextStyle(fontFamily: 'Satoshi', color: textMuted, fontSize: 13),
                                 ),
                               ),
-                              Expanded(
-                                child: Divider(
-                                  color: isDark
-                                      ? AppColors.grey700
-                                      : AppColors.grey300,
-                                ),
-                              ),
+                              Expanded(child: Divider(color: textWhite.withValues(alpha: 0.1), thickness: 1)),
                             ],
                           ),
-                          const SizedBox(height: 14),
+                          
+                          const SizedBox(height: 12),
 
-                          // Social buttons row
                           Row(
                             children: [
                               Expanded(
-                                child: _SocialLoginButton(
+                                child: _buildSocialButton(
                                   icon: Icons.g_mobiledata_rounded,
                                   label: 'Google',
-                                  color: Colors.redAccent,
-                                  isDark: isDark,
                                   onTap: _loading ? null : _signInGoogle,
                                 ),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
-                                child: _SocialLoginButton(
-                                  icon: Icons.phone_outlined,
+                                child: _buildSocialButton(
+                                  icon: Icons.phone_iphone_rounded,
                                   label: 'Phone',
-                                  color: AppColors.green,
-                                  isDark: isDark,
-                                  onTap: _loading
-                                      ? null
-                                      : () {
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const PhoneAuthScreen(),
-                                            ),
-                                          );
-                                        },
+                                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PhoneAuthScreen())),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
 
-                          // Terms
+                          const SizedBox(height: 12),
+
                           Center(
-                            child: Text(
-                              'By signing in, you agree to our\nTerms & Privacy Policy',
-                              textAlign: TextAlign.center,
-                              style: AppTextStyles.caption.copyWith(
-                                color: isDark
-                                    ? AppColors.grey400
-                                    : const Color(0xFF9D9D9D),
+                            child: TextButton(
+                              onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignUpScreen())),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                               ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Sign up link
-                          Center(
-                            child: GestureDetector(
-                              onTap: () {
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (_) => const SignUpScreen(),
-                                  ),
-                                );
-                              },
                               child: RichText(
-                                text: TextSpan(
-                                  style: AppTextStyles.bodySmall.copyWith(
-                                    color: isDark
-                                        ? colors.textSecondary
-                                        : AppColors.grey600,
-                                  ),
+                                text: const TextSpan(
+                                  style: TextStyle(fontFamily: 'Satoshi', color: textMuted, fontSize: 14),
                                   children: [
-                                    const TextSpan(
-                                        text: 'Don\'t have an account? '),
+                                    TextSpan(text: "Don't have an account? "),
                                     TextSpan(
                                       text: 'Sign Up',
-                                      style: AppTextStyles.bodySmall.copyWith(
-                                        color: isDark
-                                            ? AppColors.yellow
-                                            : AppColors.black,
+                                      style: TextStyle(
+                                        fontFamily: 'Clash Display',
+                                        color: accentYellow,
                                         fontWeight: FontWeight.w700,
+                                        fontSize: 15,
                                       ),
                                     ),
                                   ],
@@ -365,160 +372,37 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------
-
-  Widget _buildField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required bool isDark,
-    bool obscureText = false,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-    Widget? suffixIcon,
-  }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      validator: validator,
-      style: AppTextStyles.bodyMedium.copyWith(
-        color: isDark ? AppColors.white : AppColors.grey900,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: AppTextStyles.bodySmall.copyWith(
-          color: isDark ? AppColors.grey400 : AppColors.grey600,
-        ),
-        prefixIcon: Icon(
-          icon,
-          size: 18,
-          color: isDark ? AppColors.grey400 : AppColors.grey600,
-        ),
-        suffixIcon: suffixIcon,
-        filled: false,
-        contentPadding: const EdgeInsets.symmetric(vertical: 8),
-        border: UnderlineInputBorder(
-          borderSide: BorderSide(
-            color: isDark ? AppColors.grey700 : AppColors.grey300,
-          ),
-        ),
-        enabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(
-            color: isDark ? AppColors.grey700 : AppColors.grey300,
-          ),
-        ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: AppColors.yellow, width: 2),
-        ),
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// Small shared widgets
-// =============================================================================
-
-class _BrandMark extends StatelessWidget {
-  const _BrandMark({required this.isDark});
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 34,
-      height: 34,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 12,
-            top: 8,
-            child: Transform.rotate(
-              angle: 0.14,
-              child: Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(
-                    color: AppColors.yellow.withValues(alpha: 0.7),
-                    width: 2,
+  Widget _buildSocialButton({required IconData icon, required String label, required VoidCallback? onTap}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: textWhite, size: 22),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: 'Satoshi',
+                    color: textWhite,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
                   ),
                 ),
-              ),
+              ],
             ),
-          ),
-          Positioned(
-            left: 4,
-            top: 4,
-            child: Transform.rotate(
-              angle: -0.2,
-              child: Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(
-                    color: isDark ? AppColors.white : AppColors.black,
-                    width: 2,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SocialLoginButton extends StatelessWidget {
-  const _SocialLoginButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.isDark,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final Color color;
-  final bool isDark;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isDark ? AppColors.grey900 : AppColors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isDark ? AppColors.grey700 : AppColors.grey300,
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 22, color: color),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: isDark ? AppColors.white : AppColors.grey900,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
           ),
         ),
       ),

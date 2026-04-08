@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'map/map_screen.dart';
@@ -35,23 +36,25 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       extendBody: true,
       bottomNavigationBar: SizedBox(
-        height: 65 + MediaQuery.of(context).padding.bottom,
+        height: 69 + MediaQuery.of(context).padding.bottom,
         child: Stack(
             clipBehavior: Clip.none,
             children: [
               // Nav bar background
               Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: colors.navBackground,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: colors.cardShadow,
-                        blurRadius: 20,
-                        offset: const Offset(0, -4),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0B101A).withValues(alpha: 0.85),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                        border: Border(
+                          top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -60,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: 0,
                 left: 0,
                 right: 0,
-                height: 65,
+                height: 69,
                 child: Row(
                   children: [
                     Expanded(
