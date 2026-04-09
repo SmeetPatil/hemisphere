@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
   AppColors._();
 
-  static const Color black = Color(0xFF000000);
+  static const Color black = Color(0xFF0B101A);
   static const Color white = Color(0xFFFFFFFF);
   static const Color yellow = Color(0xFFFFD600);
   static const Color yellowLight = Color(0xFFFFF9C4);
@@ -12,15 +11,16 @@ class AppColors {
   static const Color grey800 = Color(0xFF2D2D2D);
   static const Color grey700 = Color(0xFF3D3D3D);
   static const Color grey600 = Color(0xFF4F4F4F);
+  static const Color navyBlue = Color(0xFF0B2447);
   static const Color grey400 = Color(0xFF9E9E9E);
   static const Color grey300 = Color(0xFFBDBDBD);
   static const Color grey200 = Color(0xFFE0E0E0);
-  static const Color grey100 = Color(0xFFF5F5F5);
+  static const Color grey100 = Color(0xFFF3F4F6);
   static const Color red = Color(0xFFE53935);
   static const Color green = Color(0xFF43A047);
-  static const Color backgroundDark = Color(0xFF121212);
-  static const Color surfaceDark = Color(0xFF1E1E1E);
-  static const Color cardDark = Color(0xFF252525);
+  static const Color backgroundDark = Color(0xFF0B101A);
+  static const Color surfaceDark = Color(0xFF121822);
+  static const Color cardDark = Color(0xFF161E2A);
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ class HemisphereColors extends ThemeExtension<HemisphereColors> {
     divider: Color(0xFFE0E0E0),
     menuIconBg: Color(0xFFF0F0F0),
     cardShadow: Color(0x1A000000),
-    navInactive: Color(0xFF9E9E9E),
+    navInactive: AppColors.navyBlue,
   );
 
   @override
@@ -160,90 +160,91 @@ extension HemisphereContext on BuildContext {
 class AppTextStyles {
   AppTextStyles._();
 
-  static TextStyle get _baseStyle => GoogleFonts.montserrat();
+  static TextStyle get _clashDisplay => const TextStyle(fontFamily: 'ClashDisplay');
+  static TextStyle get _satoshi => const TextStyle(fontFamily: 'Satoshi');
 
   // Display
-  static TextStyle displayLarge = _baseStyle.copyWith(
+  static TextStyle displayLarge = _clashDisplay.copyWith(
     fontSize: 32,
     fontWeight: FontWeight.w800,
     color: AppColors.white,
     letterSpacing: -0.5,
   );
 
-  static TextStyle displayMedium = _baseStyle.copyWith(
+  static TextStyle displayMedium = _clashDisplay.copyWith(
     fontSize: 28,
     fontWeight: FontWeight.w700,
     color: AppColors.white,
   );
 
   // Headlines
-  static TextStyle headlineLarge = _baseStyle.copyWith(
+  static TextStyle headlineLarge = _clashDisplay.copyWith(
     fontSize: 24,
     fontWeight: FontWeight.w700,
     color: AppColors.white,
   );
 
-  static TextStyle headlineMedium = _baseStyle.copyWith(
+  static TextStyle headlineMedium = _clashDisplay.copyWith(
     fontSize: 20,
     fontWeight: FontWeight.w600,
     color: AppColors.white,
   );
 
-  static TextStyle headlineSmall = _baseStyle.copyWith(
+  static TextStyle headlineSmall = _clashDisplay.copyWith(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     color: AppColors.white,
   );
 
   // Body
-  static TextStyle bodyLarge = _baseStyle.copyWith(
+  static TextStyle bodyLarge = _satoshi.copyWith(
     fontSize: 16,
     fontWeight: FontWeight.w500,
     color: AppColors.white,
   );
 
-  static TextStyle bodyMedium = _baseStyle.copyWith(
+  static TextStyle bodyMedium = _satoshi.copyWith(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.grey300,
   );
 
-  static TextStyle bodySmall = _baseStyle.copyWith(
+  static TextStyle bodySmall = _satoshi.copyWith(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: AppColors.grey400,
   );
 
   // Labels
-  static TextStyle labelLarge = _baseStyle.copyWith(
+  static TextStyle labelLarge = _satoshi.copyWith(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.white,
     letterSpacing: 0.5,
   );
 
-  static TextStyle labelMedium = _baseStyle.copyWith(
+  static TextStyle labelMedium = _satoshi.copyWith(
     fontSize: 12,
     fontWeight: FontWeight.w500,
     color: AppColors.grey300,
   );
 
   // Button
-  static TextStyle buttonLarge = _baseStyle.copyWith(
+  static TextStyle buttonLarge = _satoshi.copyWith(
     fontSize: 18,
     fontWeight: FontWeight.w700,
     color: AppColors.black,
     letterSpacing: 0.5,
   );
 
-  static TextStyle buttonMedium = _baseStyle.copyWith(
+  static TextStyle buttonMedium = _satoshi.copyWith(
     fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.black,
   );
 
   // Caption
-  static TextStyle caption = _baseStyle.copyWith(
+  static TextStyle caption = _satoshi.copyWith(
     fontSize: 11,
     fontWeight: FontWeight.w400,
     color: AppColors.grey400,

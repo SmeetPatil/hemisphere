@@ -12,6 +12,9 @@ import '../../models/map_marker.dart';
 import '../../models/neighborhood.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/marker_info_sheet.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../../widgets/tab_entry_animator.dart';
 
 // Simple geocode result from OSM Nominatim
 class _GeoResult {
@@ -446,8 +449,64 @@ class _MapScreenState extends State<MapScreen>
     const navBarHeight = 65.0;
     final safeBottom = navBarHeight + bottomInset;
 
-    return Stack(
-      children: [
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 120, 16), // Extra right padding to avoid text overlapping the graphic
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TabEntryAnimator(
+                            tabIndex: 0,
+                            child: Text(
+                              'Map',
+                              style: AppTextStyles.displayLarge
+                                  .copyWith(color: context.h.textPrimary),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          TabEntryAnimator(
+                            tabIndex: 0,
+                            delayMs: 40,
+                            child: Text(
+                              'Explore your Locality',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: context.h.textSecondary),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                right: 4, // Adjusted to fit larger image
+                top: -60,  // Taken a bit down
+                child: TabEntryAnimator(
+                  tabIndex: 0,
+                  delayMs: 50,
+                  child: SvgPicture.asset(
+                    'assets/images/map.svg',
+                    width: 350,
+                    height: 350,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          Expanded(
+            child: Stack(
+              children: [
         // ── OSM Map ───────────────────────────────────────────────────────
         FlutterMap(
           mapController: _mapController,
@@ -462,9 +521,11 @@ class _MapScreenState extends State<MapScreen>
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}',
+              additionalOptions: {
+                'accessToken': dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '',
+              },
               userAgentPackageName: 'com.hemisphere.app',
-              tileBuilder: null, // Always use light mode for map tiles
             ),
             // Incident / Event Markers
             StreamBuilder<List<MapMarkerData>>(
@@ -537,24 +598,27 @@ class _MapScreenState extends State<MapScreen>
 
         // ── Search Bar + Dropdown ─────────────────────────────────────────
         Positioned(
-          top: MediaQuery.of(context).padding.top + 8,
+          top: 12,
           left: 16,
           right: 16,
           child: Column(
             children: [
               // Input row
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                  child: Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0B101A).withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+              Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: context.h.navBackground,
+                  borderRadius: BorderRadius.circular(10), // Bento rounded
+                  border: Border.all(color: AppColors.black, width: 2), // Heavy Foly border
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.black,
+                      blurRadius: 0,
+                      offset: Offset(4, 4), // Foly distinct shadow
                     ),
-                    child: Row(
+                  ],
+                ),
+                child: Row(
                   children: [
                     const SizedBox(width: 14),
                     Icon(Icons.search_rounded, color: context.h.iconSubtle),
@@ -606,8 +670,6 @@ class _MapScreenState extends State<MapScreen>
                       ),
                   ],
                 ),
-                  ),
-                ),
               ),
 
               // Search results dropdown
@@ -617,18 +679,21 @@ class _MapScreenState extends State<MapScreen>
                       _searchError != null))
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                      child: Container(
-                        constraints: const BoxConstraints(maxHeight: 240),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0B101A).withValues(alpha: 0.85),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1),
+                  child: Container(
+                    constraints: const BoxConstraints(maxHeight: 240),
+                    decoration: BoxDecoration(
+                      color: context.h.navBackground,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: context.h.divider, width: 1),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: AppColors.black,
+                          blurRadius: 0,
+                          offset: Offset(2, 2),
                         ),
-                        child: _searchLoading
+                      ],
+                    ),
+                    child: _searchLoading
                             ? const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 20),
                                 child: Center(
@@ -698,8 +763,6 @@ class _MapScreenState extends State<MapScreen>
                               },
                             ),
                       ),
-                    ),
-                  ),
                 ),
             ],
           ),
@@ -739,9 +802,10 @@ class _MapScreenState extends State<MapScreen>
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: context.h.surface,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(color: context.h.cardShadow, blurRadius: 8),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: context.h.divider, width: 1),
+                boxShadow: const [
+                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
                 ],
               ),
               child: Row(
@@ -763,7 +827,11 @@ class _MapScreenState extends State<MapScreen>
               ),
             ),
           ),
-      ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -780,11 +848,12 @@ class _MapPin extends StatelessWidget {
       decoration: BoxDecoration(
         color: marker.color,
         shape: BoxShape.circle,
-        boxShadow: [
+        border: Border.all(color: AppColors.black, width: 1.5),
+        boxShadow: const [
           BoxShadow(
-            color: marker.color.withValues(alpha: 0.4),
-            blurRadius: 8,
-            spreadRadius: 2,
+            color: AppColors.black,
+            blurRadius: 0,
+            offset: Offset(2, 2),
           ),
         ],
       ),
@@ -810,12 +879,13 @@ class _MapActionButton extends StatelessWidget {
         height: 46,
         decoration: BoxDecoration(
           color: highlight ? AppColors.yellow : context.h.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: context.h.divider, width: 1),
+          boxShadow: const [
             BoxShadow(
-              color: context.h.cardShadow,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.black,
+              blurRadius: 0,
+              offset: Offset(3, 3),
             ),
           ],
         ),

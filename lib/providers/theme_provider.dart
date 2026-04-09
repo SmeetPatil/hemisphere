@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class ThemeProvider extends ValueNotifier<ThemeMode> {
-  ThemeProvider._() : super(ThemeMode.dark);
+  ThemeProvider._() : super(ThemeMode.light);
 
   static final ThemeProvider instance = ThemeProvider._();
 

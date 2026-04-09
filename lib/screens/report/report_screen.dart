@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'report_form_screen.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../../widgets/tab_entry_animator.dart';
 
 class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
@@ -13,26 +15,63 @@ class ReportScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 24),
-            Text('Report', style: AppTextStyles.displayLarge.copyWith(color: context.h.textPrimary)),
-            const SizedBox(height: 6),
-            Text(
-              'Help keep your neighborhood safe and clean',
-              style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  right: -30,
+                  top: -45,
+                  child: TabEntryAnimator(
+                    tabIndex: 2,
+                    delayMs: 50,
+                    child: SvgPicture.asset(
+                      'assets/images/report.svg',
+                      width: 350,
+                      height: 350,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 24, 0, 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            TabEntryAnimator(
+                              tabIndex: 2,
+                              child: Text(
+                                'Report',
+                                style: AppTextStyles.displayLarge
+                                    .copyWith(color: context.h.textPrimary),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            TabEntryAnimator(
+                              tabIndex: 2,
+                              delayMs: 40,
+                              child: Text(
+                                'Keep Your City Clean & Safe',
+                                style: AppTextStyles.bodyMedium
+                                    .copyWith(color: context.h.textSecondary),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
             // Report Accident Button
             Expanded(
               child: _ReportActionCard(
-                title: 'Report\nAccident',
+                title: 'Report\nAccident / Construction',
                 subtitle: 'Alert emergency services & neighbors about road accidents or hazards',
                 icon: Icons.warning_rounded,
-                iconColor: AppColors.red,
-                gradient: [
-                  AppColors.red.withValues(alpha: 0.2),
-                  AppColors.red.withValues(alpha: 0.05),
-                ],
-                borderColor: AppColors.red.withValues(alpha: 0.3),
+                backgroundColor: AppColors.red,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -51,12 +90,7 @@ class ReportScreen extends StatelessWidget {
                 title: 'Report\nWaste',
                 subtitle: 'Flag overflowing bins, illegal dumps & unclean areas for cleanup',
                 icon: Icons.delete_sweep_rounded,
-                iconColor: AppColors.yellow,
-                gradient: [
-                  AppColors.yellow.withValues(alpha: 0.15),
-                  AppColors.yellow.withValues(alpha: 0.03),
-                ],
-                borderColor: AppColors.yellow.withValues(alpha: 0.3),
+                backgroundColor: AppColors.yellow,
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -75,8 +109,9 @@ class ReportScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: context.h.card,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(color: context.h.cardShadow, blurRadius: 4, offset: const Offset(0, 1)),
+                border: Border.all(color: AppColors.black, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
                 ],
               ),
               child: Row(
@@ -84,11 +119,15 @@ class ReportScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.15),
+                      color: AppColors.green,
                       borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
+                        BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                      ],
                     ),
                     child: const Icon(Icons.check_circle_outline_rounded,
-                        color: AppColors.green, size: 20),
+                        color: AppColors.black, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -96,10 +135,10 @@ class ReportScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Your reports are making a difference!',
-                            style: AppTextStyles.labelLarge.copyWith(fontSize: 13)),
+                            style: AppTextStyles.labelLarge.copyWith(fontSize: 13, color: context.h.textPrimary)),
                         const SizedBox(height: 2),
                         Text('3 of your reports resolved this week',
-                            style: AppTextStyles.caption),
+                            style: AppTextStyles.caption.copyWith(color: context.h.textSecondary)),
                       ],
                     ),
                   ),
@@ -118,18 +157,14 @@ class _ReportActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color iconColor;
-  final List<Color> gradient;
-  final Color borderColor;
+  final Color backgroundColor;
   final VoidCallback onTap;
 
   const _ReportActionCard({
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.iconColor,
-    required this.gradient,
-    required this.borderColor,
+    required this.backgroundColor,
     required this.onTap,
   });
 
@@ -140,13 +175,16 @@ class _ReportActionCard extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: gradient,
-          ),
+          color: backgroundColor,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: borderColor, width: 1.5),
+          border: Border.all(color: AppColors.black, width: 3),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.black,
+              blurRadius: 0,
+              offset: Offset(4, 4),
+            )
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -156,35 +194,52 @@ class _ReportActionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.2),
+                  color: AppColors.white,
                   borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.black, width: 2),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: AppColors.black,
+                      blurRadius: 0,
+                      offset: Offset(2, 2),
+                    )
+                  ],
                 ),
-                child: Icon(icon, color: iconColor, size: 32),
+                child: Icon(icon, color: AppColors.black, size: 32),
               ),
               const Spacer(),
-              Text(title, style: AppTextStyles.displayMedium.copyWith(color: context.h.textPrimary)),
+              Text(title, style: AppTextStyles.displayMedium.copyWith(color: AppColors.black)),
               const SizedBox(height: 6),
               Text(
                 subtitle,
                 style: AppTextStyles.bodySmall.copyWith(
-                  color: context.h.textSecondary,
+                  color: AppColors.black,
+                  fontWeight: FontWeight.w600,
                   height: 1.3,
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Text(
-                    'TAP TO REPORT',
-                    style: AppTextStyles.caption.copyWith(
-                      color: iconColor,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.black,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'TAP TO REPORT',
+                      style: AppTextStyles.caption.copyWith(
+                        color: backgroundColor,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_rounded, color: iconColor, size: 16),
-                ],
+                    const SizedBox(width: 8),
+                    Icon(Icons.arrow_forward_rounded, color: backgroundColor, size: 16),
+                  ],
+                ),
               ),
             ],
           ),

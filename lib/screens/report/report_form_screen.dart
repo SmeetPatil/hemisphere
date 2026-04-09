@@ -134,30 +134,40 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: (isAccident ? AppColors.red : AppColors.yellow)
-                    .withValues(alpha: 0.12),
+                color: (isAccident ? AppColors.red : AppColors.yellow),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: (isAccident ? AppColors.red : AppColors.yellow)
-                      .withValues(alpha: 0.3),
-                ),
+                border: Border.all(color: AppColors.black, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                ],
               ),
               child: Row(
                 children: [
-                  Icon(
-                    isAccident
-                        ? Icons.emergency_rounded
-                        : Icons.eco_rounded,
-                    color: isAccident ? AppColors.red : AppColors.yellow,
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
+                        BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                      ],
+                    ),
+                    child: Icon(
+                      isAccident ? Icons.emergency_rounded : Icons.eco_rounded,
+                      color: AppColors.black,
+                      size: 20,
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Text(
                       isAccident
                           ? 'This report will be forwarded to emergency services and nearby hospitals.'
                           : 'This report will alert the municipal cleaning staff for immediate action.',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: context.h.textTertiary,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.black,
+                        fontWeight: FontWeight.w600,
                         height: 1.4,
                       ),
                     ),
@@ -168,35 +178,45 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             const SizedBox(height: 24),
 
             // Camera section
-            Text('Capture Evidence', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary)),
+            Text('Capture Evidence', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             if (_capturedImage != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  children: [
-                    Image.file(
-                      File(_capturedImage!.path),
-                      width: double.infinity,
-                      height: 220,
-                      fit: BoxFit.cover,
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: GestureDetector(
-                        onTap: () => setState(() => _capturedImage = null),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: AppColors.black.withValues(alpha: 0.6),
-                            shape: BoxShape.circle,
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.black, width: 3),
+                  boxShadow: const [
+                    BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: Stack(
+                    children: [
+                      Image.file(
+                        File(_capturedImage!.path),
+                        width: double.infinity,
+                        height: 220,
+                        fit: BoxFit.cover,
+                      ),
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _capturedImage = null),
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppColors.yellow,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.black, width: 2),
+                            ),
+                            child: const Icon(Icons.close, color: AppColors.black, size: 20),
                           ),
-                          child: const Icon(Icons.close, color: AppColors.white, size: 18),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ] else ...[
@@ -206,9 +226,12 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                   width: double.infinity,
                   height: 180,
                   decoration: BoxDecoration(
-                    color: context.h.card,
+                    color: AppColors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: context.h.divider, width: 1.5),
+                    border: Border.all(color: AppColors.black, width: 2),
+                    boxShadow: const [
+                      BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                    ],
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -216,41 +239,54 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppColors.yellow.withValues(alpha: 0.12),
+                          color: AppColors.yellow,
                           shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.black, width: 2),
+                          boxShadow: const [
+                            BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                          ],
                         ),
                         child: const Icon(
                           Icons.camera_alt_rounded,
-                          color: AppColors.yellow,
-                          size: 36,
+                          color: AppColors.black,
+                          size: 32,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Text('Tap to Open Camera', style: AppTextStyles.labelLarge.copyWith(color: context.h.textPrimary)),
+                      const SizedBox(height: 16),
+                      Text('Tap to Open Camera', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black)),
                       const SizedBox(height: 4),
                       Text('Take a photo of the situation',
-                          style: AppTextStyles.caption.copyWith(color: context.h.textCaption)),
+                          style: AppTextStyles.caption.copyWith(color: AppColors.black.withValues(alpha: 0.6))),
                     ],
                   ),
                 ),
               ),
             ],
+            const SizedBox(height: 24),
             // Location section
-            Text('Location', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary)),
+            Text('Location', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: context.h.card,
                 borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.black, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                ],
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.15),
+                      color: isAccident ? AppColors.red : AppColors.yellow,
                       borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
+                        BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                      ],
                     ),
                     child: _isFetchingLocation
                         ? const SizedBox(
@@ -258,13 +294,13 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: AppColors.green,
+                              color: AppColors.black,
                             ),
                           )
                         : const Icon(Icons.gps_fixed_rounded,
-                            color: AppColors.green, size: 20),
+                            color: AppColors.black, size: 20),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,24 +309,34 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                           _isFetchingLocation
                               ? 'Fetching GPS coordinates...'
                               : 'Location Acquired',
-                          style: AppTextStyles.labelLarge.copyWith(fontSize: 13, color: context.h.textPrimary),
+                          style: AppTextStyles.labelLarge.copyWith(fontSize: 14, color: context.h.textPrimary, fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 4),
                         Text(
                           _currentPosition != null
                               ? '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}'
                               : _isFetchingLocation
                                   ? 'High accuracy mode'
                                   : '12.971600, 77.594600 (default)',
-                          style: AppTextStyles.caption.copyWith(color: context.h.textCaption),
+                          style: AppTextStyles.caption.copyWith(color: context.h.textSecondary),
                         ),
                       ],
                     ),
                   ),
-                  IconButton(
-                  icon: const Icon(Icons.refresh_rounded, color: AppColors.grey400),
-                    onPressed: _fetchLocation,
-                    tooltip: 'Refresh location',
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isAccident ? AppColors.red : AppColors.yellow,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
+                        BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.refresh_rounded, color: AppColors.black, size: 20),
+                      onPressed: _fetchLocation,
+                      tooltip: 'Refresh location',
+                    ),
                   ),
                 ],
               ),
@@ -298,44 +344,64 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             const SizedBox(height: 24),
 
             // Description
-            Text('Description (Optional)', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary)),
+            Text('Description (Optional)', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            TextField(
-              controller: _descriptionController,
-              maxLines: 4,
-              style: AppTextStyles.bodyMedium.copyWith(color: context.h.textPrimary),
-              decoration: InputDecoration(
-                hintText: isAccident
-                    ? 'Describe the accident: vehicles involved, injuries, road condition...'
-                    : 'Describe the waste issue: type of waste, size of dump, urgency...',
+            Container(
+              decoration: BoxDecoration(
+                color: context.h.inputFill,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.black, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                ],
+              ),
+              child: TextField(
+                controller: _descriptionController,
+                maxLines: 4,
+                style: AppTextStyles.bodyMedium.copyWith(color: context.h.textPrimary),
+                decoration: InputDecoration(
+                  hintText: isAccident
+                      ? 'Describe the accident: vehicles involved, injuries, road condition...'
+                      : 'Describe the waste issue: type of waste, size of dump, urgency...',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(color: context.h.textCaption),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                ),
               ),
             ),
             const SizedBox(height: 32),
 
             // Submit button
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submitReport,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isAccident ? AppColors.red : AppColors.yellow,
-                  foregroundColor: isAccident ? AppColors.white : AppColors.black,
-                  textStyle: AppTextStyles.buttonLarge,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
+            GestureDetector(
+              onTap: _isSubmitting ? null : _submitReport,
+              child: Container(
+                width: double.infinity,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: isAccident ? AppColors.red : AppColors.yellow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.black, width: 3),
+                  boxShadow: const [
+                    BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                  ],
                 ),
-                child: _isSubmitting
-                    ? SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: isAccident ? AppColors.white : AppColors.black,
+                child: Center(
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: AppColors.black,
+                          ),
+                        )
+                      : Text(
+                          isAccident ? 'Submit Emergency Report' : 'Submit Waste Report',
+                          style: AppTextStyles.buttonLarge.copyWith(color: AppColors.black, fontSize: 18),
                         ),
-                      )
-                    : Text(isAccident ? 'Submit Emergency Report' : 'Submit Waste Report'),
+                ),
               ),
             ),
             const SizedBox(height: 24),

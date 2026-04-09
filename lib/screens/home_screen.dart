@@ -4,11 +4,13 @@ import '../theme/app_theme.dart';
 import 'map/map_screen.dart';
 import 'community/community_screen.dart';
 import 'report/report_screen.dart';
-import 'feed/feed_screen.dart';
+import 'inbox/inbox_screen.dart';
 import 'profile/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  static final ValueNotifier<int> currentTabNotifier = ValueNotifier<int>(0);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -21,7 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
     MapScreen(),
     CommunityScreen(),
     ReportScreen(),
-    FeedScreen(),
+    InboxScreen(),
     ProfileScreen(),
   ];
 
@@ -42,19 +44,19 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               // Nav bar background
               Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0B101A).withValues(alpha: 0.85),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                        border: Border(
-                          top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
-                        ),
-                      ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    border: Border(
+                      top: BorderSide(color: AppColors.black, width: 2.0),
                     ),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.black,
+                        blurRadius: 0,
+                        offset: Offset(0, -4),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -72,7 +74,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         activeIcon: Icons.map_rounded,
                         label: 'MAP',
                         isActive: _currentIndex == 0,
-                        onTap: () => setState(() => _currentIndex = 0),
+                        onTap: () => setState(() {
+                          _currentIndex = 0;
+                          HomeScreen.currentTabNotifier.value = 0;
+                        }),
                       ),
                     ),
                     Expanded(
@@ -81,17 +86,23 @@ class _HomeScreenState extends State<HomeScreen> {
                         activeIcon: Icons.people_rounded,
                         label: 'HUB',
                         isActive: _currentIndex == 1,
-                        onTap: () => setState(() => _currentIndex = 1),
+                        onTap: () => setState(() {
+                          _currentIndex = 1;
+                          HomeScreen.currentTabNotifier.value = 1;
+                        }),
                       ),
                     ),
                     const SizedBox(width: 72), // Space for center button
                     Expanded(
                       child: _NavItem(
-                        icon: Icons.home_outlined,
-                        activeIcon: Icons.home_rounded,
-                        label: 'FEED',
+                        icon: Icons.send_outlined,
+                        activeIcon: Icons.send_rounded,
+                        label: 'INBOX',
                         isActive: _currentIndex == 3,
-                        onTap: () => setState(() => _currentIndex = 3),
+                        onTap: () => setState(() {
+                          _currentIndex = 3;
+                          HomeScreen.currentTabNotifier.value = 3;
+                        }),
                       ),
                     ),
                     Expanded(
@@ -100,7 +111,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         activeIcon: Icons.person_rounded,
                         label: 'PROFILE',
                         isActive: _currentIndex == 4,
-                        onTap: () => setState(() => _currentIndex = 4),
+                        onTap: () => setState(() {
+                          _currentIndex = 4;
+                          HomeScreen.currentTabNotifier.value = 4;
+                        }),
                       ),
                     ),
                   ],
@@ -114,7 +128,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Center(
                   child: _ReportNavButton(
                     isActive: _currentIndex == 2,
-                    onTap: () => setState(() => _currentIndex = 2),
+                    onTap: () => setState(() {
+                      _currentIndex = 2;
+                      HomeScreen.currentTabNotifier.value = 2;
+                    }),
                   ),
                 ),
               ),
@@ -192,12 +209,12 @@ class _ReportNavButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.yellow,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white, width: 4),
-          boxShadow: [
+          border: Border.all(color: AppColors.black, width: 2),
+          boxShadow: const [
             BoxShadow(
-              color: AppColors.yellow.withValues(alpha: 0.3),
-              blurRadius: 12,
-              spreadRadius: 2,
+              color: AppColors.black,
+              blurRadius: 0,
+              offset: Offset(3, 3), // Sharp bento drop shadow
             ),
           ],
         ),

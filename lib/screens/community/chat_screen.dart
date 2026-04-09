@@ -50,38 +50,39 @@ class _ChatScreenState extends State<ChatScreen> {
         title: Row(
           children: [
             CircleAvatar(
-              backgroundColor: AppColors.yellow.withValues(alpha: 0.2),
-              radius: 18,
+              backgroundColor: AppColors.yellow,
+              radius: 22,
               child: Text(
                 _otherUserName.isNotEmpty
                     ? _otherUserName[0].toUpperCase()
                     : '?',
-                style: AppTextStyles.labelLarge
-                    .copyWith(color: AppColors.yellow),
+                style: AppTextStyles.headlineMedium
+                    .copyWith(color: AppColors.black),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _otherUserName,
-                  style: AppTextStyles.headlineSmall.copyWith(fontSize: 18),
+                  style: AppTextStyles.headlineSmall.copyWith(fontSize: 22, color: context.h.textPrimary, fontWeight: FontWeight.w700),
                 ),
+                const SizedBox(height: 2),
                 Row(
                   children: [
                     Container(
-                      width: 6,
-                      height: 6,
+                      width: 8,
+                      height: 8,
                       decoration: const BoxDecoration(
                         color: AppColors.green,
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 6),
                     Text(
                       'Online',
-                      style: AppTextStyles.caption.copyWith(
+                      style: AppTextStyles.labelMedium.copyWith(
                         color: AppColors.green,
                         fontWeight: FontWeight.w600,
                       ),
@@ -93,8 +94,8 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: context.h.textPrimary),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: context.h.textPrimary, size: 28),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -120,6 +121,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   );
                 }
                 return ListView.builder(
+                  reverse: true,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
                   itemCount: docs.length,
@@ -148,31 +150,23 @@ class _ChatScreenState extends State<ChatScreen> {
                               color: isMe
                                   ? AppColors.yellow
                                   : context.h.card,
-                              borderRadius:
-                                  BorderRadius.circular(20).copyWith(
-                                bottomRight: isMe
-                                    ? const Radius.circular(4)
-                                    : null,
-                                bottomLeft: !isMe
-                                    ? const Radius.circular(4)
-                                    : null,
-                              ),
-                              boxShadow: [
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.black, width: 2),
+                              boxShadow: const [
                                 BoxShadow(
-                                  color:
-                                      Colors.black.withValues(alpha: 0.05),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 2),
+                                  color: AppColors.black,
+                                  blurRadius: 0,
+                                  offset: Offset(2, 2),
                                 ),
                               ],
                             ),
                             child: Text(
                               data['text'] ?? '',
-                              style: AppTextStyles.bodyMedium.copyWith(
+                              style: AppTextStyles.bodyLarge.copyWith(
                                 color: isMe
                                     ? AppColors.black
                                     : context.h.textPrimary,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -198,46 +192,44 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12).copyWith(
-              bottom: 12 + MediaQuery.of(context).padding.bottom,
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16).copyWith(
+              bottom: 16 + MediaQuery.of(context).padding.bottom,
             ),
             decoration: BoxDecoration(
               color: context.h.card,
-              border:
-                  Border(top: BorderSide(color: context.h.divider)),
+              border: Border(top: BorderSide(color: AppColors.black, width: 2)),
+              boxShadow: const [
+                BoxShadow(color: AppColors.black, offset: Offset(0, -4)),
+              ],
             ),
             child: Row(
               children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: context.h.surface,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: Icon(Icons.add_rounded,
-                        color: context.h.textSecondary),
-                    onPressed: () {},
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
                     decoration: BoxDecoration(
-                      color: context.h.surface,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: context.h.divider),
+                      color: context.h.inputFill,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: AppColors.black,
+                          blurRadius: 0,
+                          offset: Offset(2, 2),
+                        ),
+                      ],
                     ),
                     child: TextField(
                       controller: _msgController,
-                      style: AppTextStyles.bodyMedium
-                          .copyWith(color: context.h.textPrimary),
+                      style: AppTextStyles.bodyLarge
+                          .copyWith(color: context.h.textPrimary, fontWeight: FontWeight.w500),
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        hintStyle: AppTextStyles.bodyMedium
+                        hintStyle: AppTextStyles.bodyLarge
                             .copyWith(color: context.h.textCaption),
                         border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
                       ),
                       onSubmitted: (_) => _send(),
                     ),
@@ -245,13 +237,21 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 12),
                 Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: AppColors.yellow,
                     shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.black, width: 2),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: AppColors.black,
+                        blurRadius: 0,
+                        offset: Offset(2, 2),
+                      ),
+                    ],
                   ),
                   child: IconButton(
                     icon: const Icon(Icons.send_rounded,
-                        color: AppColors.black, size: 20),
+                        color: AppColors.black, size: 22),
                     onPressed: _send,
                   ),
                 ),
