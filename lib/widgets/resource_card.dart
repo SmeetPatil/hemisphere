@@ -5,27 +5,31 @@ import '../theme/app_theme.dart';
 class ResourceCard extends StatelessWidget {
   final ResourceListing resource;
   final VoidCallback? onTap;
+  final String? messageText;
+  final VoidCallback? onMessageTap;
 
   const ResourceCard({
     super.key,
     required this.resource,
     this.onTap,
+    this.messageText,
+    this.onMessageTap,
   });
 
-  IconData _categoryIcon() {
+  String _categoryEmoji() {
     switch (resource.category) {
       case ResourceCategory.tools:
-        return Icons.build_rounded;
+        return '🔨';
       case ResourceCategory.skills:
-        return Icons.school_rounded;
+        return '🧠';
       case ResourceCategory.hobbies:
-        return Icons.palette_rounded;
+        return '🎨';
       case ResourceCategory.books:
-        return Icons.menu_book_rounded;
+        return '📚';
       case ResourceCategory.sports:
-        return Icons.sports_tennis_rounded;
+        return '⚽';
       case ResourceCategory.other:
-        return Icons.category_rounded;
+        return '📦';
     }
   }
 
@@ -34,12 +38,18 @@ class ResourceCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: context.h.card,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(color: context.h.cardShadow, blurRadius: 4, offset: const Offset(0, 1)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.black, width: 2.0),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.black,
+              blurRadius: 0,
+              offset: Offset(4, 4), // Flat heavy Foly shadow
+            ),
           ],
         ),
         child: Column(
@@ -53,10 +63,12 @@ class ResourceCard extends StatelessWidget {
                     color: AppColors.yellow.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    _categoryIcon(),
-                    color: AppColors.yellow,
-                    size: 20,
+                  child: Text(
+                    '${_categoryEmoji()} ${resource.category.name.toUpperCase()}',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.yellow,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
                 const Spacer(),
@@ -81,14 +93,14 @@ class ResourceCard extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               resource.title,
-              style: AppTextStyles.labelLarge.copyWith(fontSize: 13, color: context.h.textPrimary),
+              style: AppTextStyles.headlineSmall.copyWith(fontSize: 18, color: context.h.textPrimary),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 4),
             Text(
               resource.description,
-              style: AppTextStyles.caption.copyWith(height: 1.3, color: context.h.textCaption),
+              style: AppTextStyles.bodyMedium.copyWith(height: 1.3, fontSize: 14, color: context.h.textCaption),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
@@ -107,12 +119,35 @@ class ResourceCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     resource.ownerName,
-                    style: AppTextStyles.caption.copyWith(color: context.h.textCaption),
+                    style: AppTextStyles.bodyMedium.copyWith(fontSize: 13, color: context.h.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
+            if (messageText != null && onMessageTap != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                height: 40,
+                child: ElevatedButton.icon(
+                  onPressed: onMessageTap,
+                  icon: const Icon(Icons.chat_rounded, size: 16),
+                  label: Text(messageText!, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    backgroundColor: AppColors.yellow,
+                    foregroundColor: AppColors.black,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: const BorderSide(color: AppColors.black, width: 2),
+                    ),
+                    textStyle: AppTextStyles.buttonMedium.copyWith(fontSize: 13, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

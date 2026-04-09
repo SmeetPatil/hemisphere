@@ -21,18 +21,35 @@ class EventCard extends StatelessWidget {
     this.onMessageTap,
   });
 
+  String _getCategoryEmoji(String cat) {
+    final c = cat.toLowerCase();
+    if (c.contains('social') || c.contains('party')) return '🎉';
+    if (c.contains('tech') || c.contains('code')) return '💻';
+    if (c.contains('sport') || c.contains('run') || c.contains('fit')) return '🏃';
+    if (c.contains('art') || c.contains('craft')) return '🎨';
+    if (c.contains('food') || c.contains('cook')) return '🍔';
+    if (c.contains('music') || c.contains('concert')) return '🎵';
+    if (c.contains('game')) return '🎮';
+    return '📅';
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(24), // Enlarged container padding
         decoration: BoxDecoration(
           color: context.h.card,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(color: context.h.cardShadow, blurRadius: 4, offset: const Offset(0, 1)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.black, width: 2.0), // Heavy Foly border
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.black,
+              blurRadius: 0,
+              offset: Offset(4, 4), // Hard offset
+            ),
           ],
         ),
         child: Column(
@@ -48,7 +65,7 @@ class EventCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    event.category,
+                    '${_getCategoryEmoji(event.category)} ${event.category}',
                     style: AppTextStyles.caption.copyWith(
                       color: AppColors.yellow,
                       fontWeight: FontWeight.w600,
@@ -60,19 +77,17 @@ class EventCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   DateFormat('MMM d, h:mm a').format(event.dateTime),
-                  style: AppTextStyles.caption.copyWith(color: context.h.textCaption),
+                  style: AppTextStyles.bodyMedium.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: context.h.textPrimary),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             // Title
-            Text(event.title, style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary)),
-            const SizedBox(height: 6),
+            Text(event.title, style: AppTextStyles.headlineSmall.copyWith(fontSize: 22, color: context.h.textPrimary)),
+            const SizedBox(height: 8),
             Text(
               event.description,
-              style: AppTextStyles.bodySmall.copyWith(height: 1.4, color: context.h.textSecondary),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodyMedium.copyWith(height: 1.4, fontSize: 16, color: context.h.textSecondary),
             ),
             const SizedBox(height: 12),
             // Location
@@ -83,7 +98,7 @@ class EventCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     event.location,
-                    style: AppTextStyles.bodySmall.copyWith(color: context.h.textSecondary),
+                    style: AppTextStyles.bodyMedium.copyWith(fontSize: 14, color: context.h.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
@@ -101,18 +116,18 @@ class EventCard extends StatelessWidget {
                     children: [
                       Text(
                         '${event.attendees}/${event.maxAttendees} attending',
-                        style: AppTextStyles.caption.copyWith(color: context.h.textCaption),
+                        style: AppTextStyles.bodyMedium.copyWith(fontSize: 14, fontWeight: FontWeight.w600, color: context.h.textPrimary),
                       ),
                       const SizedBox(height: 8),
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.zero, // Sharp Foly edges
                         child: LinearProgressIndicator(
                           value: event.fillPercentage,
                           backgroundColor: context.h.divider,
                           valueColor: AlwaysStoppedAnimation<Color>(
                             event.isFull ? AppColors.red : AppColors.yellow,
                           ),
-                          minHeight: 4,
+                          minHeight: 6,
                         ),
                       ),
                       const SizedBox(height: 16), // Match padding for visual balance
@@ -137,8 +152,10 @@ class EventCard extends StatelessWidget {
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: context.h.textPrimary,
-                            side: BorderSide(color: context.h.divider),
+                            backgroundColor: context.h.surface, // Solid background
+                            side: const BorderSide(color: AppColors.black, width: 2), // Heavy outline
                             padding: const EdgeInsets.symmetric(horizontal: 12),
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -147,17 +164,24 @@ class EventCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 10),
                     ],
-                    SizedBox(
-                      height: 36,
-                      child: ElevatedButton(
-                        onPressed: event.isFull || isJoined ? null : onJoin,
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          textStyle: AppTextStyles.buttonMedium.copyWith(fontSize: 13),
+                      SizedBox(
+                        height: 38,
+                        child: ElevatedButton(
+                          onPressed: event.isFull || isJoined ? null : onJoin,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            backgroundColor: event.isFull || isJoined ? context.h.surface : AppColors.yellow,
+                            foregroundColor: event.isFull || isJoined ? context.h.textSecondary : AppColors.black,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                                side: const BorderSide(color: AppColors.black, width: 2) // Bold Border
+                            ),
+                            textStyle: AppTextStyles.buttonMedium.copyWith(fontSize: 13, fontWeight: FontWeight.w800),
+                          ),
+                          child: Text(isJoined ? 'Joined' : (event.isFull ? 'Full' : 'Join')),
                         ),
-                        child: Text(isJoined ? 'Joined' : (event.isFull ? 'Full' : 'Join')),
                       ),
-                    ),
                   ],
                 ),
               ],

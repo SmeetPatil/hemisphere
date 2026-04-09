@@ -11,7 +11,8 @@ import 'edit_profile_screen.dart';
 import 'followers_screen.dart';
 import 'emission_logger_screen.dart';
 import 'my_activity_list.dart';
-
+import '../../widgets/tab_entry_animator.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -125,60 +126,85 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final colors = context.h;
 
     return SafeArea(
-      child: _loading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.yellow))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(18, 10, 18, 110),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'My profile',
-                        style: AppTextStyles.headlineLarge.copyWith(
-                          color: colors.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned(
+                right: -20,
+                top: -60,
+                child: SizedBox(
+                  width: 275,
+                  height: 145, // Clips the bottom to prevent overlapping the profile card
+                  child: TabEntryAnimator(
+                    tabIndex: 4,
+                    delayMs: 50,
+                    child: SvgPicture.asset(
+                      'assets/images/profile.svg',
+                      fit: BoxFit.fitWidth,
+                      alignment: Alignment.topCenter,
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _CircleIconButton(
-                            icon: Icons.notifications_none_rounded,
-                            onTap: () => _showComingSoon('Notifications'),
+                          TabEntryAnimator(
+                            tabIndex: 4,
+                            child: Text(
+                              'Profile',
+                              style: AppTextStyles.displayLarge
+                                  .copyWith(color: colors.textPrimary),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          _CircleIconButton(
-                            icon: Icons.settings_outlined,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const SettingsScreen()),
-                              );
-                            },
+                          const SizedBox(height: 4),
+                          TabEntryAnimator(
+                            tabIndex: 4,
+                            delayMs: 40,
+                            child: Text(
+                              'Manage your account and activity',
+                              style: AppTextStyles.bodyMedium
+                                  .copyWith(color: colors.textSecondary),
+                            ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-
-                  // Profile card
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.yellow))
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 110),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Profile card
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
                     decoration: BoxDecoration(
                       color: colors.card,
-                      borderRadius: BorderRadius.circular(22),
-                      boxShadow: [
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
                         BoxShadow(
-                          color: colors.cardShadow,
-                          blurRadius: 18,
-                          offset: const Offset(0, 10),
+                          color: AppColors.black,
+                          blurRadius: 0,
+                          offset: Offset(4, 4),
                         ),
                       ],
                     ),
@@ -267,16 +293,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           const SizedBox(height: 6),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                                horizontal: 12, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppColors.yellow.withValues(alpha: 0.15),
+                              color: AppColors.yellow,
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.black, width: 1.5),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.black,
+                                  blurRadius: 0,
+                                  offset: Offset(2, 2),
+                                )
+                              ],
                             ),
                             child: Text(
                               'Signed in via $_signInMethod',
                               style: AppTextStyles.caption.copyWith(
-                                color: AppColors.yellow,
-                                fontWeight: FontWeight.w600,
+                                color: AppColors.black,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
@@ -327,53 +361,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 14),
 
                         // Edit Profile button
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const EditProfileScreen(),
-                                ),
-                              ).then((updated) {
-                                if (updated == true) _loadProfile();
-                              });
-                            },
-                            icon: const Icon(Icons.edit_rounded, size: 16),
-                            label: const Text('Edit Profile'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.yellow,
-                              side: const BorderSide(color: AppColors.yellow),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const EditProfileScreen(),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ).then((updated) {
+                              if (updated == true) _loadProfile();
+                            });
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: AppColors.yellow,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.black, width: 2),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.black,
+                                  blurRadius: 0,
+                                  offset: Offset(4, 4),
+                                )
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.edit_rounded, color: AppColors.black, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Edit Profile',
+                                  style: AppTextStyles.buttonMedium.copyWith(color: AppColors.black),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                         const SizedBox(height: 12),
                         // Log Emissions button
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const EmissionLoggerScreen(),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.eco_rounded, size: 16),
-                            label: const Text('Log Emissions'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.green,
-                              side: const BorderSide(color: AppColors.green),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const EmissionLoggerScreen(),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            );
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: AppColors.green,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: AppColors.black, width: 2),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: AppColors.black,
+                                  blurRadius: 0,
+                                  offset: Offset(4, 4),
+                                )
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.eco_rounded, color: AppColors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Log Emissions',
+                                  style: AppTextStyles.buttonMedium.copyWith(color: AppColors.white),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -397,8 +459,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Settings section
                   Container(
                     decoration: BoxDecoration(
-                      color: colors.card,
-                      borderRadius: BorderRadius.circular(20),
+                      color: context.h.card,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: AppColors.black,
+                          blurRadius: 0,
+                          offset: Offset(4, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -478,14 +548,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 8),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                          child: OutlinedButton(
-                            onPressed: _signOut,
-                            style: OutlinedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(52),
-                              foregroundColor: const Color(0xFFF06A61),
-                              side: BorderSide(color: colors.divider),
+                          child: GestureDetector(
+                            onTap: _signOut,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: AppColors.black, width: 2),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: AppColors.black,
+                                    blurRadius: 0,
+                                    offset: Offset(4, 4),
+                                  )
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Log out',
+                                  style: AppTextStyles.buttonMedium.copyWith(color: const Color(0xFFF06A61), fontWeight: FontWeight.w700),
+                                ),
+                              ),
                             ),
-                            child: const Text('Log out'),
                           ),
                         ),
                       ],
@@ -494,6 +580,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -521,7 +610,15 @@ class _CircleIconButton extends StatelessWidget {
         height: 38,
         decoration: BoxDecoration(
           color: colors.menuIconBg,
-          shape: BoxShape.circle,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.black, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: AppColors.black,
+              blurRadius: 0,
+              offset: Offset(2, 2),
+            )
+          ],
         ),
         child: Icon(icon, size: 20, color: colors.textPrimary),
       ),
@@ -589,7 +686,7 @@ class _SettingRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: colors.divider)),
+          border: Border(bottom: BorderSide(color: AppColors.black, width: 1.5)),
         ),
         child: Row(
           children: [

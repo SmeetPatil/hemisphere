@@ -9,7 +9,6 @@ import '../../services/firestore_service.dart';
 class _CustomTextField extends StatelessWidget {
   final TextEditingController? controller;
   final String hintText;
-  final String labelText;
   final int maxLines;
   final IconData? icon;
   final bool readOnly;
@@ -19,7 +18,6 @@ class _CustomTextField extends StatelessWidget {
   const _CustomTextField({
     this.controller,
     required this.hintText,
-    required this.labelText,
     this.maxLines = 1,
     this.icon,
     this.readOnly = false,
@@ -31,9 +29,9 @@ class _CustomTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: context.h.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: context.h.divider),
+        color: context.h.inputFill,
+        borderRadius: BorderRadius.circular(10), // Foly inputs
+        border: Border.all(color: AppColors.black, width: 2), // Heavy black border
       ),
       child: TextField(
         controller: controller,
@@ -43,9 +41,6 @@ class _CustomTextField extends StatelessWidget {
         keyboardType: keyboardType,
         style: AppTextStyles.bodyMedium.copyWith(color: context.h.textPrimary),
         decoration: InputDecoration(
-          labelText: labelText,
-          labelStyle:
-              AppTextStyles.labelMedium.copyWith(color: context.h.textSecondary),
           hintText: hintText,
           hintStyle:
               AppTextStyles.bodyMedium.copyWith(color: context.h.textCaption),
@@ -89,8 +84,12 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
-              color: context.h.surface,
+              color: context.h.card,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.black, width: 2),
+              boxShadow: const [
+                BoxShadow(color: AppColors.black, offset: Offset(4, 4), blurRadius: 0),
+              ],
             ),
             child: Row(
               children: [
@@ -121,17 +120,21 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       child: GestureDetector(
         onTap: () => setState(() => _selectedIndex = index),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.yellow : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+               color: isSelected ? AppColors.black : Colors.transparent, 
+               width: 2,
+            ),
           ),
           child: Center(
             child: Text(
               label,
               style: AppTextStyles.labelLarge.copyWith(
                 color: isSelected ? AppColors.black : context.h.textSecondary,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
               ),
             ),
           ),
@@ -213,9 +216,9 @@ class _EventFormState extends State<_EventForm> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        _CustomTextField(controller: _titleC, labelText: 'Event Title', hintText: 'What is happening?', icon: Icons.title_rounded),
+        _CustomTextField(controller: _titleC, hintText: 'Event Title (What is happening?)', icon: Icons.title_rounded),
         const SizedBox(height: 16),
-        _CustomTextField(controller: _locC, labelText: 'Location', hintText: 'Where is it?', icon: Icons.location_on_rounded),
+        _CustomTextField(controller: _locC, hintText: 'Location (Where is it?)', icon: Icons.location_on_rounded),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -224,8 +227,7 @@ class _EventFormState extends State<_EventForm> {
                 controller: TextEditingController(
                   text: '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
                 ),
-                labelText: 'Date',
-                hintText: 'Select Date',
+                hintText: 'Date',
                 icon: Icons.calendar_today_rounded,
                 readOnly: true,
                 onTap: _pickDate,
@@ -235,8 +237,7 @@ class _EventFormState extends State<_EventForm> {
             Expanded(
               child: _CustomTextField(
                 controller: TextEditingController(text: _selectedTime.format(context)),
-                labelText: 'Time',
-                hintText: 'Select Time',
+                hintText: 'Time',
                 icon: Icons.access_time_rounded,
                 readOnly: true,
                 onTap: _pickTime,
@@ -247,13 +248,13 @@ class _EventFormState extends State<_EventForm> {
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _CustomTextField(controller: _categoryC, labelText: 'Category', hintText: 'e.g. Social, Tech', icon: Icons.category_rounded)),
+            Expanded(child: _CustomTextField(controller: _categoryC, hintText: 'Category (e.g. Social, Tech)', icon: Icons.category_rounded)),
             const SizedBox(width: 16),
-            Expanded(child: _CustomTextField(controller: _attendeesC, labelText: 'Max People', hintText: 'e.g. 20', icon: Icons.people_rounded, keyboardType: TextInputType.number)),
+            Expanded(child: _CustomTextField(controller: _attendeesC, hintText: 'Max People (e.g. 20)', icon: Icons.people_rounded, keyboardType: TextInputType.number)),
           ],
         ),
         const SizedBox(height: 16),
-        _CustomTextField(controller: _descC, maxLines: 4, labelText: 'Description', hintText: 'Provide details about the event'),
+        _CustomTextField(controller: _descC, maxLines: 4, hintText: 'Description (Provide details about the event)'),
         const SizedBox(height: 32),
         ElevatedButton(
           onPressed: _submit,
@@ -261,10 +262,13 @@ class _EventFormState extends State<_EventForm> {
             backgroundColor: AppColors.yellow,
             foregroundColor: AppColors.black,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.black, width: 2),
+            ),
             elevation: 0,
           ),
-          child: Text('Create Event', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black, fontWeight: FontWeight.w700)),
+          child: Text('Create Event', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black, fontWeight: FontWeight.w800)),
         ),
       ],
     );
@@ -313,16 +317,14 @@ class _ResourceFormState extends State<_ResourceForm> {
       children: [
         _CustomTextField(
           controller: _titleC,
-          labelText: widget.isHobby ? 'Hobby Title' : 'Resource Title',
-          hintText: widget.isHobby ? 'e.g. Weekend Cycling' : 'e.g. Power Drill',
+          hintText: widget.isHobby ? 'Hobby Title (e.g. Weekend Cycling)' : 'Resource Title (e.g. Power Drill)',
           icon: widget.isHobby ? Icons.sports_tennis_rounded : Icons.build_rounded,
         ),
         const SizedBox(height: 16),
         _CustomTextField(
           controller: _descC,
           maxLines: 4,
-          labelText: 'Description',
-          hintText: widget.isHobby ? 'Tell us about your hobby' : 'Describe the resource you are sharing',
+          hintText: widget.isHobby ? 'Description (Tell us about your hobby)' : 'Description (Describe the resource you are sharing)',
         ),
         const SizedBox(height: 32),
         ElevatedButton(
@@ -331,12 +333,15 @@ class _ResourceFormState extends State<_ResourceForm> {
             backgroundColor: AppColors.yellow,
             foregroundColor: AppColors.black,
             padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppColors.black, width: 2),
+            ),
             elevation: 0,
           ),
           child: Text(
             widget.isHobby ? 'Post Hobby' : 'Post Resource',
-            style: AppTextStyles.labelLarge.copyWith(color: AppColors.black, fontWeight: FontWeight.w700),
+            style: AppTextStyles.labelLarge.copyWith(color: AppColors.black, fontWeight: FontWeight.w800),
           ),
         ),
       ],

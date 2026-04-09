@@ -200,8 +200,8 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(title, style: AppTextStyles.headlineSmall),
-        content: Text(message, style: AppTextStyles.bodyMedium),
+        title: Text(title, style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.bold)),
+        content: Text(message, style: AppTextStyles.bodyMedium.copyWith(color: context.h.textSecondary)),
         actions: [
           TextButton(
             onPressed: () {
@@ -226,58 +226,63 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
             children: [
               Text(
                 'Processing Report',
-                style: AppTextStyles.displayLarge.copyWith(color: context.h.textPrimary),
+                style: AppTextStyles.headlineLarge.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 32),
               
               // Animated Image Preview
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.file(
-                      File(widget.imagePath),
-                      width: 250,
-                      height: 250,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  // Scanning line animation
-                  AnimatedBuilder(
-                    animation: _scanningController,
-                    builder: (context, child) {
-                      return Positioned(
-                        top: _scanningController.value * 230,
-                        child: Container(
-                          width: 250,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppColors.green,
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.green.withValues(alpha: 0.6),
-                                blurRadius: 10,
-                                spreadRadius: 5,
+              Container(
+                width: 260,
+                height: 260,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.black, width: 4),
+                  boxShadow: const [
+                    BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(6, 6)),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Stack(
+                    alignment: Alignment.topCenter,
+                    children: [
+                      Image.file(
+                        File(widget.imagePath),
+                        width: 260,
+                        height: 260,
+                        fit: BoxFit.cover,
+                      ),
+                      // Scanning line animation
+                      AnimatedBuilder(
+                        animation: _scanningController,
+                        builder: (context, child) {
+                          return Positioned(
+                            top: _scanningController.value * 256,
+                            child: Container(
+                              width: 260,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: AppColors.green,
+                                border: Border.all(color: AppColors.black, width: 1),
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
               
-              const SizedBox(height: 40),
+              const SizedBox(height: 48),
               
-              const CircularProgressIndicator(color: AppColors.green),
+              const CircularProgressIndicator(color: AppColors.green, strokeWidth: 4),
               const SizedBox(height: 24),
               
               Text(
                 _statusMessage,
                 textAlign: TextAlign.center,
-                style: AppTextStyles.bodyLarge.copyWith(color: context.h.textSecondary),
+                style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.bold),
               ),
             ],
           ),

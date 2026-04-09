@@ -510,7 +510,6 @@ class FirestoreService extends ChangeNotifier {
     if (_uid == null) return const Stream.empty();
     return _chatsCol
         .where('participants', arrayContains: _uid)
-        .orderBy('lastMessageAt', descending: true)
         .snapshots();
   }
 
@@ -524,7 +523,7 @@ class FirestoreService extends ChangeNotifier {
     return _chatsCol
         .doc(chatId)
         .collection('messages')
-        .orderBy('timestamp', descending: false)
+        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
