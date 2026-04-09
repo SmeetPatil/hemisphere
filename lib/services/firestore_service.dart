@@ -190,7 +190,8 @@ class FirestoreService extends ChangeNotifier {
   }
 
   Future<void> addEvent(CommunityEvent event) async {
-    await _eventsCol.add({
+    final docRef = _eventsCol.doc();
+    await docRef.set({
       'title': event.title,
       'description': event.description,
       'organizer': event.organizer,
@@ -207,16 +208,17 @@ class FirestoreService extends ChangeNotifier {
     });
 
     if (event.latitude != null && event.longitude != null) {
-      await addMapMarker(MapMarkerData(
-        id: '',
-        title: event.title,
-        description: event.description,
-        position: LatLng(event.latitude!, event.longitude!),
-        type: MarkerType.communityEvent,
-        timestamp: DateTime.now(),
-        reportedBy: event.organizer,
-        neighborhoodId: event.neighborhoodId,
-      ));
+      await _mapMarkersCol.doc(docRef.id).set({
+        'title': event.title,
+        'description': event.description,
+        'lat': event.latitude,
+        'lng': event.longitude,
+        'type': MarkerType.communityEvent.name,
+        'timestamp': Timestamp.fromDate(DateTime.now()),
+        'reportedBy': event.organizer,
+        'neighborhoodId': event.neighborhoodId,
+        'createdBy': _uid,
+      });
     }
   }
 
@@ -309,7 +311,8 @@ class FirestoreService extends ChangeNotifier {
         ? _hobbiesCol 
         : _resourcesCol;
     
-    await col.add({
+    final docRef = col.doc();
+    await docRef.set({
       'title': resource.title,
       'description': resource.description,
       'ownerName': resource.ownerName,
@@ -324,16 +327,17 @@ class FirestoreService extends ChangeNotifier {
     });
 
     if (resource.latitude != null && resource.longitude != null) {
-      await addMapMarker(MapMarkerData(
-        id: '',
-        title: resource.title,
-        description: resource.description,
-        position: LatLng(resource.latitude!, resource.longitude!),
-        type: (resource.category == ResourceCategory.hobbies || resource.category == ResourceCategory.sports) ? MarkerType.hobby : MarkerType.sharedResource,
-        timestamp: DateTime.now(),
-        reportedBy: resource.ownerName,
-        neighborhoodId: resource.neighborhoodId,
-      ));
+      await _mapMarkersCol.doc(docRef.id).set({
+        'title': resource.title,
+        'description': resource.description,
+        'lat': resource.latitude,
+        'lng': resource.longitude,
+        'type': (resource.category == ResourceCategory.hobbies || resource.category == ResourceCategory.sports) ? MarkerType.hobby.name : MarkerType.sharedResource.name,
+        'timestamp': Timestamp.fromDate(DateTime.now()),
+        'reportedBy': resource.ownerName,
+        'neighborhoodId': resource.neighborhoodId,
+        'createdBy': _uid,
+      });
     }
   }
 
@@ -428,6 +432,8 @@ class FirestoreService extends ChangeNotifier {
     } else if (type == 'feed') {
       await _feedCol.doc(docId).delete();
     }
+    // Delete corresponding map marker if it exists (since they share the same docId now)
+    await _mapMarkersCol.doc(docId).delete();
   }
 
   // =========================================================================
@@ -589,7 +595,9 @@ class FirestoreService extends ChangeNotifier {
   }) async {
     final batch = _db.batch();
 
-    final markerRef = _mapMarkersCol.doc();
+    final feedRef = _feedCol.doc();
+    final markerRef = _mapMarkersCol.doc(feedRef.id);
+    
     batch.set(markerRef, {
       'title': markerData.title,
       'description': markerData.description,
@@ -602,7 +610,6 @@ class FirestoreService extends ChangeNotifier {
       'createdBy': _uid,
     });
 
-    final feedRef = _feedCol.doc();
     batch.set(feedRef, {
       'authorName': feedData.authorName,
       'authorAvatar': feedData.authorAvatar,

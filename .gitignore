@@ -69,3 +69,5 @@ key.properties
 /android/local.properties
 /android/gradle.properties
 .env
+android/gradle.properties
+android/local.properties

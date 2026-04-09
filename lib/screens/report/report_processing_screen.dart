@@ -73,9 +73,11 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
     String finalResult = result?.toLowerCase() ?? 'unrecognized';
 
+    final formattedResult = finalResult.substring(0, 1).toUpperCase() + finalResult.substring(1);
+    
     // Wait a brief moment to show classification result
     setState(() {
-      _statusMessage = 'Result determined: $finalResult. Finalizing...';
+      _statusMessage = 'Classification Complete!\nDetected: $formattedResult';
     });
     await Future.delayed(const Duration(seconds: 1));
 

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'package:image/image.dart' as img;
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -6,7 +7,8 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 class MLService {
   Interpreter? _safetyInterpreter;
   Interpreter? _garbageInterpreter;
-  Interpreter? _emissionsInterpreter;
+  Interpreter? _emissionsInterpreterOriginal;
+  Interpreter? _emissionsInterpreterNew;
 
   final List<String> _safetyClasses = ['accident', 'construction', 'normal'];
   final List<String> _garbageClasses = ['clean', 'garbage'];
@@ -18,8 +20,11 @@ class MLService {
       _garbageInterpreter = await Interpreter.fromAsset(
         'assets/models/garbage_classification_model.tflite',
       );
-      _emissionsInterpreter = await Interpreter.fromAsset(
+      _emissionsInterpreterOriginal = await Interpreter.fromAsset(
         'assets/models/emissions_model.tflite',
+      );
+      _emissionsInterpreterNew = await Interpreter.fromAsset(
+        'assets/models/emissions_model_2.tflite',
       );
     } catch (_) {
       // Keep null interpreters and return fallback labels in predict methods.
@@ -32,7 +37,7 @@ class MLService {
     }
 
     try {
-      final input = _preProcessImage(imageFile);
+      final input = await compute(_preProcessImageWorker, imageFile.path);
       final output = List.filled(1 * 3, 0.0).reshape([1, 3]);
       _safetyInterpreter!.run(input, output);
       return _getLabel(output[0], _safetyClasses);
@@ -47,7 +52,7 @@ class MLService {
     }
 
     try {
-      final input = _preProcessImage(imageFile);
+      final input = await compute(_preProcessImageWorker, imageFile.path);
       final output = List.filled(1 * 2, 0.0).reshape([1, 2]);
       _garbageInterpreter!.run(input, output);
       return _getLabel(output[0], _garbageClasses);
@@ -56,71 +61,90 @@ class MLService {
     }
   }
 
-  Future<double?> predictEmissions(
+Future<double?> predictEmissionsOriginal(
       double engineSizeL, int cylinders, int fuelType, double daysUsed, double hoursPerDay) async {
-    if (_emissionsInterpreter == null) {
+    if (_emissionsInterpreterOriginal == null) {
       return null;
     }
 
     try {
-      // Normalization constants from training parameters
       const double meanEngine = 3.1651;
       const double stdEngine = 1.3593;
       const double meanCylinders = 5.6234;
       const double stdCylinders = 1.8341;
 
-      // Normalize continuous features
       final normalizedEngine = (engineSizeL - meanEngine) / stdEngine;
       final normalizedCyl = (cylinders - meanCylinders) / stdCylinders;
 
-      // Create input tensor [1, 3]
-      // Features: Engine Size, Cylinders, Fuel Type
       final input = [
         [normalizedEngine, normalizedCyl, fuelType.toDouble()]
       ];
 
-      // Assuming model outputs a single continuous value [1, 1]
       final output = List.filled(1 * 1, 0.0).reshape([1, 1]);
-      
-      _emissionsInterpreter!.run(input, output);
-      
+      _emissionsInterpreterOriginal!.run(input, output);
+
       final double co2PerKm = output[0][0];
-      
-      // Calculate total emissions based on hours and days
-      // Assuming avg speed of 30 km/h in neighborhood/city conditions
+
       const double avgSpeedKmh = 30.0;
       final double totalDistanceKm = daysUsed * hoursPerDay * avgSpeedKmh;
-      final double totalEmissionGrams = co2PerKm * totalDistanceKm;
-      
-      return totalEmissionGrams;
+      return co2PerKm * totalDistanceKm;
     } catch (e) {
-      print('Emissions prediction error: \$e');
+      print('Emissions prediction error (Original): \$e');
       return null;
     }
   }
 
-  List<List<List<List<double>>>> _preProcessImage(File imageFile) {
-    final imageData = imageFile.readAsBytesSync();
-    final originalImage = img.decodeImage(imageData);
-    final image = img.copyResize(originalImage!, width: 224, height: 224);
+  Future<double?> predictEmissionsHeuristic(
+      double engineSizeL, int cylinders, int fuelType, int vehicleYear, double daysUsed, double hoursPerDay) async {
+    final double? originalEmissions = await predictEmissionsOriginal(engineSizeL, cylinders, fuelType, daysUsed, hoursPerDay);
+    if (originalEmissions == null) return null;
 
-    return List.generate(
-      1,
-      (i) => List.generate(
-        224,
-        (y) => List.generate(
-          224,
-          (x) {
-            final pixel = image.getPixel(x, y);
-            return [
-              pixel.r / 255.0,
-              pixel.g / 255.0,
-              pixel.b / 255.0,
-            ];
-          },
-        ),
-      ),
-    );
+    // Apply a heuristic penalty: add 1% extra emissions for every year the car is older than 2024
+    int currentYear = 2024;
+    double agePenalty = 1.0;
+    if (vehicleYear < currentYear) {
+      agePenalty += (currentYear - vehicleYear) * 0.01;
+    }
+    
+    return originalEmissions * agePenalty;
+  }
+
+  Future<double?> predictEmissionsNew(
+      double engineSizeL, int vehicleAge, int fuelTypeNewVersion, double daysUsed, double hoursPerDay) async {
+    if (_emissionsInterpreterNew == null) {
+      return null;
+    }
+
+    try {
+      // NEW MODEL: Engine Size, Age of Vehicle, Fuel Type.
+      // Fuel Mapping: {'Electric': 0, 'Hybrid': 1, 'Petrol': 2, 'Diesel': 3}
+      // Engine Size -> Mean: 3.3639, Std: 1.4967
+      // Age of Vehicle -> Mean: 14.4819, Std: 8.6033
+      
+      const double meanEngine = 3.3639;
+      const double stdEngine = 1.4967;
+      const double meanAge = 14.4819;
+      const double stdAge = 8.6033;
+
+      final normalizedEngine = (engineSizeL - meanEngine) / stdEngine;
+      final normalizedAge = (vehicleAge.toDouble() - meanAge) / stdAge;
+
+      final input = [
+        [normalizedEngine, normalizedAge, fuelTypeNewVersion.toDouble()]
+      ];
+
+      final output = List.filled(1 * 1, 0.0).reshape([1, 1]);
+      _emissionsInterpreterNew!.run(input, output);
+
+      final double co2PerKm = output[0][0];
+
+      const double avgSpeedKmh = 30.0;
+      final double totalDistanceKm = daysUsed * hoursPerDay * avgSpeedKmh;
+      return co2PerKm * totalDistanceKm;
+    } catch (e) {
+      print('Emissions prediction error (New): \$e');
+      return null;
+    }
   }
 
   String _getLabel(
@@ -148,6 +172,31 @@ class MLService {
   void dispose() {
     _safetyInterpreter?.close();
     _garbageInterpreter?.close();
-    _emissionsInterpreter?.close();
+    _emissionsInterpreterOriginal?.close();
+    _emissionsInterpreterNew?.close();
   }
+}
+
+List<List<List<List<double>>>> _preProcessImageWorker(String imagePath) {
+  final imageData = File(imagePath).readAsBytesSync();
+  final originalImage = img.decodeImage(imageData);
+  final image = img.copyResize(originalImage!, width: 224, height: 224);
+
+  return List.generate(
+    1,
+    (i) => List.generate(
+      224,
+      (y) => List.generate(
+        224,
+        (x) {
+          final pixel = image.getPixel(x, y);
+          return [
+            pixel.r.toDouble(),
+            pixel.g.toDouble(),
+            pixel.b.toDouble(),
+          ];
+        },
+      ),
+    ),
+  );
 }

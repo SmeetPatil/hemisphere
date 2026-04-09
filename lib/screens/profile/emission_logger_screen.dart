@@ -94,8 +94,19 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
       _statusMessage = 'Calculating Emissions via ML Model...';
     });
 
-    // 2. TFLite Prediction
-    final double? totalEmissions = await _mlService.predictEmissions(
+    // 2. TFLite Prediction (All 3 Models)
+    int yInt = int.tryParse(yearInput) ?? 2010;
+    int calculatedAge = DateTime.now().year - yInt;
+    if (calculatedAge < 0) calculatedAge = 0;
+
+    int getFuelTypeNew(int originalFuelType) {
+      if (originalFuelType == 4) return 0; // Electric
+      if (originalFuelType == 2) return 3; // Diesel
+      // Treat everything else as Petrol/Hybrid. For fallback:
+      return 2; // Petrol
+    }
+
+    final double? totalEmissionsOriginal = await _mlService.predictEmissionsOriginal(
       specs['engine_size'],
       specs['cylinders'],
       specs['fuel_type'],
@@ -103,7 +114,25 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
       hoursInput,
     );
 
-    if (totalEmissions == null) {
+    final double? totalEmissionsHeuristic = await _mlService.predictEmissionsHeuristic(
+      specs['engine_size'],
+      specs['cylinders'],
+      specs['fuel_type'],
+      yInt,
+      daysInput,
+      hoursInput,
+    );
+
+    final double? totalEmissionsNew = await _mlService.predictEmissionsNew(
+      specs['engine_size'],
+      calculatedAge,
+      getFuelTypeNew(specs['fuel_type']),
+      daysInput,
+      hoursInput,
+    );
+
+
+    if (totalEmissionsOriginal == null || totalEmissionsHeuristic == null || totalEmissionsNew == null) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error predicting emissions locally')),
@@ -115,10 +144,12 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
       _statusMessage = 'Logging to Firebase...';
     });
 
+    final double totalEmissionsAvg = (totalEmissionsOriginal + totalEmissionsHeuristic + totalEmissionsNew) / 3;
+
     // 3. Save to Firebase
     try {
       await FirestoreService.instance.logVehicleEmission(
-        totalEmissionGrams: totalEmissions,
+        totalEmissionGrams: totalEmissionsAvg,
         model: modelInput,
         year: yearInput,
         daysUsed: daysInput,
@@ -127,14 +158,22 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
 
       setState(() => _isLoading = false);
 
-      final double kg = totalEmissions / 1000;
+      final double kgOriginal = totalEmissionsOriginal / 1000;
+      final double kgHeuristic = totalEmissionsHeuristic / 1000;
+      final double kgNew = totalEmissionsNew / 1000;
+      final double kgAvg = totalEmissionsAvg / 1000;
 
       if (!mounted) return;
-      
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => EmissionResultScreen(emissionKg: kg),
+          builder: (context) => EmissionResultScreen(
+            emissionKg: kgAvg,
+            emissionKgOriginal: kgOriginal,
+            emissionKgHeuristic: kgHeuristic,
+            emissionKgNew: kgNew,
+          ),
         ),
       );
     } catch (e) {
@@ -215,9 +254,6 @@ class _EmissionLoggerScreenState extends State<EmissionLoggerScreen> {
                       final matched = _cachedModels.where((e) => _capitalizeWords(e['name'].toString()) == selection).toList();
                       _availableYears = matched.map((e) => e['year'].toString()).toSet().toList();
                       _availableYears.sort((a,b) => b.compareTo(a)); // Descending
-                      if (_availableYears.isNotEmpty && _yearCtrl.text.isEmpty) {
-                        _yearCtrl.text = _availableYears.first;
-                      }
                       setState(() {});
                     },
                     fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {

@@ -4,8 +4,17 @@ import 'package:hemisphere/theme/app_theme.dart';
 
 class EmissionResultScreen extends StatefulWidget {
   final double emissionKg;
+  final double emissionKgOriginal;
+  final double emissionKgHeuristic;
+  final double emissionKgNew;
 
-  const EmissionResultScreen({Key? key, required this.emissionKg}) : super(key: key);
+  const EmissionResultScreen({
+    Key? key, 
+    required this.emissionKg,
+    required this.emissionKgOriginal,
+    required this.emissionKgHeuristic,
+    required this.emissionKgNew,
+  }) : super(key: key);
 
   @override
   State<EmissionResultScreen> createState() => _EmissionResultScreenState();
@@ -20,18 +29,26 @@ class _EmissionResultScreenState extends State<EmissionResultScreen> with Single
   // < 10 kg -> Green
   // 10 - 30 kg -> Yellow
   // > 30 kg -> Red
-  final double _maxEmission = 60.0;
-  
+
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
 
-    double targetValue = widget.emissionKg / _maxEmission;
+    double targetValue = 0.0;
+    if (widget.emissionKg <= 10.0) {
+      targetValue = (widget.emissionKg / 10.0) * 0.333;
+    } else if (widget.emissionKg <= 30.0) {
+      targetValue = 0.333 + ((widget.emissionKg - 10.0) / 20.0) * 0.333;
+    } else {
+      double maxRed = max(90.0, widget.emissionKg * 1.5);
+      targetValue = 0.666 + ((widget.emissionKg - 30.0) / (maxRed - 30.0)) * 0.334;
+    }
+    
     if (targetValue > 1.0) targetValue = 1.0;
 
     _animation = Tween<double>(begin: 0.0, end: targetValue).animate(
@@ -79,11 +96,17 @@ class _EmissionResultScreenState extends State<EmissionResultScreen> with Single
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-        child: Column(
-          children: [
-            const Spacer(),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  child: Column(
+                    children: [
+                      const Spacer(),
             // Meter
             SizedBox(
               height: 250,
@@ -104,6 +127,22 @@ class _EmissionResultScreenState extends State<EmissionResultScreen> with Single
               style: AppTextStyles.displayMedium.copyWith(color: catColor),
             ),
             const SizedBox(height: 8),
+            Text(
+              'Average Result',
+              style: AppTextStyles.labelLarge.copyWith(color: context.h.textSecondary),
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildModelColumn('Base Value', widget.emissionKgOriginal, context.h.textSecondary),
+                Container(height: 40, width: 1, color: context.h.divider),
+                _buildModelColumn('Heuristic Value', widget.emissionKgHeuristic, context.h.textSecondary),
+                Container(height: 40, width: 1, color: context.h.divider),
+                _buildModelColumn('Upper Limit', widget.emissionKgNew, context.h.textSecondary),
+              ],
+            ),
+            const SizedBox(height: 16),
             // Category
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -124,24 +163,41 @@ class _EmissionResultScreenState extends State<EmissionResultScreen> with Single
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyLarge.copyWith(color: context.h.textPrimary, height: 1.5),
             ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context, true); // Pop out back to logs/profile
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.green,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-              ),
-              child: Text(
-                'Done',
-                style: AppTextStyles.buttonMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                      const Spacer(),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context, true); // Pop out back to logs/profile
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.green,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                        ),
+                        child: Text(
+                          'Done',
+                          style: AppTextStyles.buttonMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildModelColumn(String label, double value, Color textColor) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(label, textAlign: TextAlign.center, style: AppTextStyles.labelMedium.copyWith(color: textColor)),
+          const SizedBox(height: 4),
+          Text('${value.toStringAsFixed(2)} kg', textAlign: TextAlign.center, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: context.h.textPrimary)),
+        ],
       ),
     );
   }
