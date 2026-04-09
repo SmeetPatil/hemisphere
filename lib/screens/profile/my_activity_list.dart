@@ -1,75 +1,152 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/firestore_service.dart';
 import '../../theme/app_theme.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../home_screen.dart'; // To listen to tab switches
 
 class MyActivityList extends StatefulWidget {
-  const MyActivityList({super.key});
+  final int refreshTrigger;
+  const MyActivityList({super.key, this.refreshTrigger = 0});
 
   @override
   State<MyActivityList> createState() => _MyActivityListState();
 }
 
-class _MyActivityListState extends State<MyActivityList> {
+class _MyActivityListState extends State<MyActivityList> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   bool _loading = true;
+  List<_ActivityItem> _posts = [];
   List<_ActivityItem> _activities = [];
 
   @override
   void initState() {
     super.initState();
-    _loadActivity();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabSelection);
+    HomeScreen.currentTabNotifier.addListener(_handleBottomTabSelection);
+    _loadData();
   }
 
-  Future<void> _loadActivity() async {
-    setState(() => _loading = true);
-    final List<_ActivityItem> items = [];
-    final db = FirestoreService.instance;
+  void _handleBottomTabSelection() {
+    if (HomeScreen.currentTabNotifier.value == 4) {
+      _loadData();
+    }
+  }
 
-    // Fetch Events
+  @override
+  void didUpdateWidget(covariant MyActivityList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshTrigger != oldWidget.refreshTrigger) {
+      _loadData();
+    }
+  }
+
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) return;
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    HomeScreen.currentTabNotifier.removeListener(_handleBottomTabSelection);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _loading = true);
+
+    final db = FirestoreService.instance;
+    final List<_ActivityItem> newPosts = [];
+    final List<_ActivityItem> newActivities = [];
+
+    // Fetch Posts and Reports (Created by user)
     final eventsRef = await db.getUserEvents();
     for (var doc in eventsRef) {
-      items.add(_ActivityItem(
+      newPosts.add(_ActivityItem(
         id: doc.id,
         title: doc.title,
         description: doc.description,
         type: 'Event',
         date: doc.dateTime,
-        onDelete: () => _deleteItem(doc.id, 'event'),
+        onAction: () => _deleteItem(doc.id, 'event'),
       ));
     }
 
-    // Fetch Resources
     final resourcesRef = await db.getUserResources();
     for (var doc in resourcesRef) {
-      items.add(_ActivityItem(
+      newPosts.add(_ActivityItem(
         id: doc.id,
         title: doc.title,
         description: doc.description,
         type: doc.category.name.toLowerCase() == 'hobbies' ? 'Hobby' : 'Resource',
         date: doc.postedAt,
-        onDelete: () => _deleteItem(doc.id, 'resource', isHobby: doc.category.name.toLowerCase() == 'hobbies'),
+        onAction: () => _deleteItem(doc.id, 'resource', isHobby: doc.category.name.toLowerCase() == 'hobbies'),
       ));
     }
 
-    // Fetch Feed/Reports
     final feedRef = await db.getUserFeedPosts();
     for (var doc in feedRef) {
-      items.add(_ActivityItem(
+      newPosts.add(_ActivityItem(
         id: doc.id,
         title: 'Report: ${doc.type}',
         description: doc.content,
         type: 'Report',
         date: doc.timestamp,
-        onDelete: () => _deleteItem(doc.id, 'feed'),
+        onAction: () => _deleteItem(doc.id, 'feed'),
       ));
     }
 
-    items.sort((a, b) => b.date.compareTo(a.date));
+    // Fetch Activities / Joined Events
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final snap = await FirebaseFirestore.instance.collection('events').where('joinedBy', arrayContains: uid).get();
+      for (var doc in snap.docs) {
+        final data = doc.data();
+        newActivities.add(_ActivityItem(
+          id: doc.id,
+          title: data['title'] ?? 'Event',
+          description: data['description'] ?? '',
+          type: 'Joined Event',
+          date: (data['dateTime'] as Timestamp).toDate(),
+          onAction: () => _leaveEvent(doc.id),     
+        ));
+      }
+    }
+
+    newPosts.sort((a, b) => b.date.compareTo(a.date));
+    newActivities.sort((a, b) => b.date.compareTo(a.date));
 
     if (mounted) {
       setState(() {
-        _activities = items;
+        _posts = newPosts;
+        _activities = newActivities;
         _loading = false;
       });
+    }
+  }
+
+  Future<void> _leaveEvent(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.h.surface,
+        title: Text('Leave Event', style: TextStyle(color: context.h.textPrimary)),
+        content: Text('Are you sure you want to leave this event?', style: TextStyle(color: context.h.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Leave', style: TextStyle(color: Colors.red)),   
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirestoreService.instance.toggleEventJoin(id);
+      _loadData();
     }
   }
 
@@ -83,8 +160,8 @@ class _MyActivityListState extends State<MyActivityList> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, true), 
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),   
           ),
         ],
       ),
@@ -92,58 +169,107 @@ class _MyActivityListState extends State<MyActivityList> {
 
     if (confirm == true) {
       await FirestoreService.instance.deleteUserPost(id, colType, isHobby: isHobby);
-      _loadActivity(); // Reload
+      _loadData();
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_activities.isEmpty) {
+  Widget _buildGrid(List<_ActivityItem> items, bool isDelete) {
+    if (items.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Text(
-            'No recent activity.',
+            'No content here.',
             style: AppTextStyles.bodyLarge.copyWith(color: context.h.textSecondary),
           ),
         ),
       );
     }
 
-    return ListView.builder(
+    return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _activities.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 0.85,
+      ),
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = _activities[index];
+        final item = items[index];
         final colors = context.h;
-        return Card(
-          color: colors.card,
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            title: Text(item.title, style: AppTextStyles.headlineSmall.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold)),
-            subtitle: Column(
+        return Container(
+          decoration: BoxDecoration(
+            color: colors.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.black, width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.black,
+                blurRadius: 0,
+                offset: Offset(4, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 4),
-                Text(item.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppTextStyles.headlineSmall.copyWith(color: colors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                    if (item.onAction != null)
+                      GestureDetector(
+                        onTap: item.onAction,
+                        child: Icon(
+                          isDelete ? Icons.delete_outline : Icons.exit_to_app, 
+                          color: Colors.red, 
+                          size: 20
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: Text(item.description, maxLines: 3, overflow: TextOverflow.ellipsis, style: AppTextStyles.bodyMedium.copyWith(color: colors.textSecondary, fontSize: 13)),
+                ),
                 const SizedBox(height: 8),
                 Text(
-                  '${item.type} • ${item.date.month}/${item.date.day}/${item.date.year}',
-                  style: AppTextStyles.bodySmall.copyWith(color: colors.textSecondary),
+                  '${item.type}\n${item.date.month}/${item.date.day}/${item.date.year}',
+                  style: AppTextStyles.caption.copyWith(color: colors.textSecondary, fontSize: 11),
                 ),
               ],
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: item.onDelete,
             ),
           ),
         );
       },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          labelColor: AppColors.black,
+          unselectedLabelColor: context.h.textSecondary,
+          indicatorColor: AppColors.yellow,
+          tabs: const [
+            Tab(text: 'Posts & Reports'),
+            Tab(text: 'Activities'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _loading
+          ? const SizedBox(height: 100, child: Center(child: CircularProgressIndicator()))
+          : [_buildGrid(_posts, true), _buildGrid(_activities, false)][_tabController.index],
+      ],
     );
   }
 }
@@ -154,7 +280,7 @@ class _ActivityItem {
   final String description;
   final String type;
   final DateTime date;
-  final VoidCallback onDelete;
+  final VoidCallback? onAction;
 
   _ActivityItem({
     required this.id,
@@ -162,6 +288,6 @@ class _ActivityItem {
     required this.description,
     required this.type,
     required this.date,
-    required this.onDelete,
+    this.onAction,
   });
 }

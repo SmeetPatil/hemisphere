@@ -12,6 +12,7 @@ class ResourceListing {
   final String? neighborhoodId;
   final double? latitude;
   final double? longitude;
+  final String? createdBy;
 
   const ResourceListing({
     required this.id,
@@ -25,6 +26,7 @@ class ResourceListing {
     this.neighborhoodId,
     this.latitude,
     this.longitude,
+    this.createdBy,
   });
 
   String get categoryLabel {

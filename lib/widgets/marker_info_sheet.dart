@@ -1,28 +1,66 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
 import '../models/map_marker.dart';
 import '../theme/app_theme.dart';
 import 'package:intl/intl.dart';
 
-class MarkerInfoSheet extends StatelessWidget {
+class MarkerInfoSheet extends StatefulWidget {
   final MapMarkerData marker;
 
   const MarkerInfoSheet({super.key, required this.marker});
 
+  @override
+  State<MarkerInfoSheet> createState() => _MarkerInfoSheetState();
+}
+
+class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
+  String? _address;
+  bool _loadingAddress = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAddress();
+  }
+
+  Future<void> _fetchAddress() async {
+    final lat = widget.marker.position.latitude;
+    final lng = widget.marker.position.longitude;
+    final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json');
+    try {
+      final res = await http.get(url, headers: {'User-Agent': 'HemisphereApp/1.0 (flutter)'});
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _address = data['display_name'];
+            _loadingAddress = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loadingAddress = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingAddress = false);
+    }
+  }
+
   String _formatTime() {
-    final diff = DateTime.now().difference(marker.timestamp);
+    final diff = DateTime.now().difference(widget.marker.timestamp);
     if (diff.isNegative) {
-      return 'Upcoming: ${DateFormat('MMM d, h:mm a').format(marker.timestamp)}';
+      return 'Upcoming: ${DateFormat('MMM d, h:mm a').format(widget.marker.timestamp)}';
     }
     if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
     if (diff.inHours < 24) return '${diff.inHours} hours ago';
-    return DateFormat('MMM d, h:mm a').format(marker.timestamp);
+    return DateFormat('MMM d, h:mm a').format(widget.marker.timestamp);
   }
 
   Future<void> _openDirections() async {
-    final lat = marker.position.latitude;
-    final lng = marker.position.longitude;
-    final label = Uri.encodeComponent(marker.title);
+    final lat = widget.marker.position.latitude;
+    final lng = widget.marker.position.longitude;
+    final label = Uri.encodeComponent(widget.marker.title);
 
     // Try geo URI first (opens native maps on Android/iOS)
     final geoUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng($label)');
@@ -76,18 +114,18 @@ class MarkerInfoSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: marker.color.withValues(alpha: 0.15),
+                  color: widget.marker.color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(marker.icon, size: 14, color: marker.color),
+                    Icon(widget.marker.icon, size: 14, color: widget.marker.color),
                     const SizedBox(width: 6),
                     Text(
-                      marker.typeLabel,
+                      widget.marker.typeLabel,
                       style: AppTextStyles.caption.copyWith(
-                        color: marker.color,
+                        color: widget.marker.color,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -102,11 +140,11 @@ class MarkerInfoSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           // Title
-          Text(marker.title, style: AppTextStyles.headlineMedium.copyWith(color: context.h.textPrimary)),
+          Text(widget.marker.title, style: AppTextStyles.headlineMedium.copyWith(color: context.h.textPrimary)),
           const SizedBox(height: 8),
           // Description
           Text(
-            marker.description,
+            widget.marker.description,
             style: AppTextStyles.bodyMedium.copyWith(height: 1.5, color: context.h.textSecondary),
           ),
           const SizedBox(height: 16),
@@ -116,26 +154,42 @@ class MarkerInfoSheet extends StatelessWidget {
               Icon(Icons.person_outline_rounded, size: 16, color: context.h.iconSubtle),
               const SizedBox(width: 6),
               Text(
-                'Reported by ${marker.reportedBy}',
+                'Reported by ${widget.marker.reportedBy}',
                 style: AppTextStyles.bodySmall.copyWith(color: context.h.textSecondary),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          // Textual Location
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.location_on, size: 16, color: context.h.iconSubtle),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _loadingAddress 
+                    ? Text('Loading address...', style: AppTextStyles.bodySmall.copyWith(color: context.h.textSecondary, fontStyle: FontStyle.italic))
+                    : Text(
+                        _address ?? 'Address not available',
+                        style: AppTextStyles.bodySmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.w500),
+                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
           // Coordinates
           Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 16, color: context.h.iconSubtle),
-              const SizedBox(width: 6),
+              const SizedBox(width: 22), // Account for icon width + spacing above
               Text(
-                '${marker.position.latitude.toStringAsFixed(4)}, ${marker.position.longitude.toStringAsFixed(4)}',
+                '${widget.marker.position.latitude.toStringAsFixed(4)}, ${widget.marker.position.longitude.toStringAsFixed(4)}',
                 style: AppTextStyles.bodySmall.copyWith(color: context.h.textSecondary),
               ),
             ],
           ),
           const SizedBox(height: 24),
           // Action buttons
-          if (marker.type == MarkerType.accident) ...[
+          if (widget.marker.type == MarkerType.accident) ...[
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(

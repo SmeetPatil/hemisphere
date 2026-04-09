@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import 'report_form_screen.dart';
+import 'sos_form_screen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../widgets/tab_entry_animator.dart';
 
@@ -10,11 +11,17 @@ class ReportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: IntrinsicHeight(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -65,13 +72,30 @@ class ReportScreen extends StatelessWidget {
                 ),
               ],
             ),
+            // SOS Button
+            Expanded(
+              child: _ReportActionCard(
+                title: 'Send\nSOS Signal',
+                subtitle: 'Send an emergency SMS with live location directly to your registered contact.',
+                icon: Icons.sos_rounded,
+                backgroundColor: AppColors.red, // Make the SOS one red, maybe change accident to orange/violet? 
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SosFormScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
             // Report Accident Button
             Expanded(
               child: _ReportActionCard(
                 title: 'Report\nAccident / Construction',
                 subtitle: 'Alert emergency services & neighbors about road accidents or hazards',
                 icon: Icons.warning_rounded,
-                backgroundColor: AppColors.red,
+                backgroundColor: const Color(0xFFFFA07A), // Orange-ish to leave Red for SOS exclusively
                 onTap: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -102,52 +126,14 @@ class ReportScreen extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(height: 24),
-            // Recent reports indicator
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: context.h.card,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.black, width: 2),
-                boxShadow: const [
-                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.green,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: AppColors.black, width: 2),
-                      boxShadow: const [
-                        BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
-                      ],
-                    ),
-                    child: const Icon(Icons.check_circle_outline_rounded,
-                        color: AppColors.black, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Your reports are making a difference!',
-                            style: AppTextStyles.labelLarge.copyWith(fontSize: 13, color: context.h.textPrimary)),
-                        const SizedBox(height: 2),
-                        Text('3 of your reports resolved this week',
-                            style: AppTextStyles.caption.copyWith(color: context.h.textSecondary)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 16),
           ],
-        ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -187,29 +173,39 @@ class _ReportActionCard extends StatelessWidget {
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.black, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: AppColors.black,
-                      blurRadius: 0,
-                      offset: Offset(2, 2),
-                    )
-                  ],
-                ),
-                child: Icon(icon, color: AppColors.black, size: 32),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.black, width: 2),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: AppColors.black,
+                          blurRadius: 0,
+                          offset: Offset(2, 2),
+                        )
+                      ],
+                    ),
+                    child: Icon(icon, color: AppColors.black, size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      title.replaceAll('\n', ' '), 
+                      style: AppTextStyles.displayMedium.copyWith(color: AppColors.black, fontSize: 22),
+                    ),
+                  ),
+                ],
               ),
               const Spacer(),
-              Text(title, style: AppTextStyles.displayMedium.copyWith(color: AppColors.black)),
-              const SizedBox(height: 6),
               Text(
                 subtitle,
                 style: AppTextStyles.bodySmall.copyWith(
@@ -218,7 +214,7 @@ class _ReportActionCard extends StatelessWidget {
                   height: 1.3,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(

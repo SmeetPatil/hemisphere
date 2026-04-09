@@ -8,6 +8,7 @@ class EventCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onJoin;
   final bool isJoined;
+  final bool isCreator;
   final String? messageText;
   final VoidCallback? onMessageTap;
 
@@ -17,6 +18,7 @@ class EventCard extends StatelessWidget {
     this.onTap,
     this.onJoin,
     this.isJoined = false,
+    this.isCreator = false,
     this.messageText,
     this.onMessageTap,
   });
@@ -67,7 +69,7 @@ class EventCard extends StatelessWidget {
                   child: Text(
                     '${_getCategoryEmoji(event.category)} ${event.category}',
                     style: AppTextStyles.caption.copyWith(
-                      color: AppColors.yellow,
+                      color: AppColors.black, 
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -147,12 +149,13 @@ class EventCard extends StatelessWidget {
                           label: Text(
                             messageText!,
                             style: AppTextStyles.caption.copyWith(
+                              color: AppColors.black,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: context.h.textPrimary,
-                            backgroundColor: context.h.surface, // Solid background
+                            foregroundColor: AppColors.black,
+                            backgroundColor: AppColors.yellow, // Solid background
                             side: const BorderSide(color: AppColors.black, width: 2), // Heavy outline
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             elevation: 0,
@@ -167,11 +170,11 @@ class EventCard extends StatelessWidget {
                       SizedBox(
                         height: 38,
                         child: ElevatedButton(
-                          onPressed: event.isFull || isJoined ? null : onJoin,
+                          onPressed: isCreator || (!isJoined && event.isFull) ? null : onJoin,  
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
-                            backgroundColor: event.isFull || isJoined ? context.h.surface : AppColors.yellow,
-                            foregroundColor: event.isFull || isJoined ? context.h.textSecondary : AppColors.black,
+                            backgroundColor: isCreator || (!isJoined && event.isFull) ? context.h.surface : (isJoined ? AppColors.green : AppColors.yellow),
+                            foregroundColor: isCreator || (!isJoined && event.isFull) ? context.h.textSecondary : (isJoined ? AppColors.white : AppColors.black),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
@@ -179,7 +182,7 @@ class EventCard extends StatelessWidget {
                             ),
                             textStyle: AppTextStyles.buttonMedium.copyWith(fontSize: 13, fontWeight: FontWeight.w800),
                           ),
-                          child: Text(isJoined ? 'Joined' : (event.isFull ? 'Full' : 'Join')),
+                          child: Text(isCreator ? 'Hosting' : (isJoined ? 'Joined' : (event.isFull ? 'Full' : 'Join'))),
                         ),
                       ),
                   ],

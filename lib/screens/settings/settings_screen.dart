@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/dev_mode_provider.dart';
 import '../../theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -65,6 +66,61 @@ class SettingsScreen extends StatelessWidget {
                         onTap: () =>
                             ThemeProvider.instance.setThemeMode(ThemeMode.light),
                         colors: colors,
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Developer Options',
+              style: AppTextStyles.headlineSmall.copyWith(color: colors.textPrimary),
+            ),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<bool>(
+              valueListenable: DevModeProvider.instance,
+              builder: (context, isDevMode, _) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: colors.card,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.cardShadow,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.developer_mode_rounded, color: isDevMode ? AppColors.yellow : colors.iconSubtle, size: 22),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Dev Mode',
+                              style: AppTextStyles.labelLarge.copyWith(
+                                color: colors.textPrimary,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Enable quick uploads from Gallery (Demo)',
+                              style: AppTextStyles.caption.copyWith(color: colors.textCaption),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: isDevMode,
+                        onChanged: (val) => DevModeProvider.instance.setDevMode(val),
+                        activeColor: AppColors.yellow,
                       ),
                     ],
                   ),

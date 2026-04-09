@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'auth/login_screen.dart';
 
@@ -62,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: AppColors.backgroundDark,
       body: Center(
         child: FadeTransition(
           opacity: _fadeIn,
@@ -76,12 +78,13 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 20),
               const Text(
-                'Hemisphere',
+                'HemiSphere',
                 style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 0.2,
+                  fontFamily: 'Clash Display',
+                  fontSize: 36,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.yellow,
+                  letterSpacing: 1.0,
                 ),
               ),
             ],

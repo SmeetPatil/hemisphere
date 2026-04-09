@@ -12,6 +12,8 @@ class CommunityEvent {
   final String? neighborhoodId;
   final double? latitude;
   final double? longitude;
+  final String? createdBy;
+  final List<String>? joinedBy;
 
   const CommunityEvent({
     required this.id,
@@ -27,6 +29,8 @@ class CommunityEvent {
     this.neighborhoodId,
     this.latitude,
     this.longitude,
+    this.createdBy,
+    this.joinedBy,
   });
 
   bool get isFull => attendees >= maxAttendees;

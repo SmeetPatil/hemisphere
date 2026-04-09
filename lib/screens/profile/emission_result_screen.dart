@@ -9,7 +9,7 @@ class EmissionResultScreen extends StatefulWidget {
   final double emissionKgNew;
 
   const EmissionResultScreen({
-    Key? key, 
+    Key? key,
     required this.emissionKg,
     required this.emissionKgOriginal,
     required this.emissionKgHeuristic,
@@ -20,7 +20,8 @@ class EmissionResultScreen extends StatefulWidget {
   State<EmissionResultScreen> createState() => _EmissionResultScreenState();
 }
 
-class _EmissionResultScreenState extends State<EmissionResultScreen> with SingleTickerProviderStateMixin {
+class _EmissionResultScreenState extends State<EmissionResultScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -46,14 +47,16 @@ class _EmissionResultScreenState extends State<EmissionResultScreen> with Single
       targetValue = 0.333 + ((widget.emissionKg - 10.0) / 20.0) * 0.333;
     } else {
       double maxRed = max(90.0, widget.emissionKg * 1.5);
-      targetValue = 0.666 + ((widget.emissionKg - 30.0) / (maxRed - 30.0)) * 0.334;
+      targetValue =
+          0.666 + ((widget.emissionKg - 30.0) / (maxRed - 30.0)) * 0.334;
     }
-    
+
     if (targetValue > 1.0) targetValue = 1.0;
 
-    _animation = Tween<double>(begin: 0.0, end: targetValue).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
-    );
+    _animation = Tween<double>(
+      begin: 0.0,
+      end: targetValue,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.elasticOut));
 
     _controller.forward();
   }
@@ -103,79 +106,153 @@ class _EmissionResultScreenState extends State<EmissionResultScreen> with Single
               constraints: BoxConstraints(minHeight: constraints.maxHeight),
               child: IntrinsicHeight(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24.0,
+                    vertical: 32.0,
+                  ),
                   child: Column(
                     children: [
                       const Spacer(),
-            // Meter
-            SizedBox(
-              height: 250,
-              width: double.infinity,
-              child: AnimatedBuilder(
-                animation: _animation,
-                builder: (context, child) {
-                  return CustomPaint(
-                    painter: MeterPainter(_animation.value),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Value
-            Text(
-              '${widget.emissionKg.toStringAsFixed(2)} kg CO2',
-              style: AppTextStyles.displayMedium.copyWith(color: catColor),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Average Result',
-              style: AppTextStyles.labelLarge.copyWith(color: context.h.textSecondary),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildModelColumn('Base Value', widget.emissionKgOriginal, context.h.textSecondary),
-                Container(height: 40, width: 1, color: context.h.divider),
-                _buildModelColumn('Heuristic Value', widget.emissionKgHeuristic, context.h.textSecondary),
-                Container(height: 40, width: 1, color: context.h.divider),
-                _buildModelColumn('Upper Limit', widget.emissionKgNew, context.h.textSecondary),
-              ],
-            ),
-            const SizedBox(height: 16),
-            // Category
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              decoration: BoxDecoration(
-                color: catColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: catColor),
-              ),
-              child: Text(
-                _getCategoryText().toUpperCase(),
-                style: AppTextStyles.labelLarge.copyWith(color: catColor, fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Contextual Text
-            Text(
-              _getContextualText(),
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyLarge.copyWith(color: context.h.textPrimary, height: 1.5),
-            ),
+                      // Neo-brutalist container
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 24,
+                        ),
+                        decoration: BoxDecoration(
+                          color: context.h.card,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.black, width: 2),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: AppColors.black,
+                              blurRadius: 0,
+                              offset: Offset(4, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Meter
+                            SizedBox(
+                              height: 250,
+                              width: double.infinity,
+                              child: AnimatedBuilder(
+                                animation: _animation,
+                                builder: (context, child) {
+                                  return CustomPaint(
+                                    painter: MeterPainter(_animation.value),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            // Value
+                            Text(
+                              '${widget.emissionKg.toStringAsFixed(2)} kg CO2',
+                              style: AppTextStyles.displayMedium.copyWith(
+                                color: catColor,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Average Result',
+                              style: AppTextStyles.labelLarge.copyWith(
+                                color: context.h.textSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildModelColumn(
+                                  'Base Value',
+                                  widget.emissionKgOriginal,
+                                  context.h.textSecondary,
+                                ),
+                                Container(
+                                  height: 40,
+                                  width: 1,
+                                  color: context.h.divider,
+                                ),
+                                _buildModelColumn(
+                                  'Heuristic Value',
+                                  widget.emissionKgHeuristic,
+                                  context.h.textSecondary,
+                                ),
+                                Container(
+                                  height: 40,
+                                  width: 1,
+                                  color: context.h.divider,
+                                ),
+                                _buildModelColumn(
+                                  'Upper Limit',
+                                  widget.emissionKgNew,
+                                  context.h.textSecondary,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            // Category
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: catColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: catColor),
+                              ),
+                              child: Text(
+                                _getCategoryText().toUpperCase(),
+                                style: AppTextStyles.labelLarge.copyWith(
+                                  color: catColor,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            // Contextual Text
+                            Text(
+                              _getContextualText(),
+                              textAlign: TextAlign.center,
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                color: context.h.textPrimary,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       const Spacer(),
                       ElevatedButton(
                         onPressed: () {
-                          Navigator.pop(context, true); // Pop out back to logs/profile
+                          Navigator.pop(
+                            context,
+                            true,
+                          ); // Pop out back to logs/profile
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.green,
+                          foregroundColor: AppColors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            side: const BorderSide(
+                              color: AppColors.black,
+                              width: 2,
+                            ),
+                          ),
                           minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                          elevation: 0,
                         ),
                         child: Text(
                           'Done',
-                          style: AppTextStyles.buttonMedium.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                          style: AppTextStyles.buttonMedium.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -194,9 +271,20 @@ class _EmissionResultScreenState extends State<EmissionResultScreen> with Single
     return Expanded(
       child: Column(
         children: [
-          Text(label, textAlign: TextAlign.center, style: AppTextStyles.labelMedium.copyWith(color: textColor)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.labelMedium.copyWith(color: textColor),
+          ),
           const SizedBox(height: 4),
-          Text('${value.toStringAsFixed(2)} kg', textAlign: TextAlign.center, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold, color: context.h.textPrimary)),
+          Text(
+            '${value.toStringAsFixed(2)} kg',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyLarge.copyWith(
+              fontWeight: FontWeight.bold,
+              color: context.h.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -234,20 +322,29 @@ class MeterPainter extends CustomPainter {
 
     // Draw Needle
     final needleAngle = pi + (percentage * pi);
-    final needleLength = radius - 10;
+    final needleLength = radius + 10;
 
     final needleEndX = center.dx + needleLength * cos(needleAngle);
     final needleEndY = center.dy + needleLength * sin(needleAngle);
 
+    final needleBorderPaint = Paint()
+      ..color = AppColors.yellow
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round;
+
     final needlePaint = Paint()
-      ..color = AppColors.white
+      ..color = AppColors.black
       ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
 
+    canvas.drawLine(center, Offset(needleEndX, needleEndY), needleBorderPaint);
     canvas.drawLine(center, Offset(needleEndX, needleEndY), needlePaint);
 
     // Draw center dot
-    final centerDotPaint = Paint()..color = AppColors.white;
+    final centerDotBorderPaint = Paint()..color = AppColors.yellow;
+    canvas.drawCircle(center, 14, centerDotBorderPaint);
+
+    final centerDotPaint = Paint()..color = AppColors.black;
     canvas.drawCircle(center, 10, centerDotPaint);
   }
 

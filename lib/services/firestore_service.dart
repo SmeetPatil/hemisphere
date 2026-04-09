@@ -32,7 +32,8 @@ class FirestoreService extends ChangeNotifier {
     final snap = await ref.get();
     if (!snap.exists) {
       await ref.set({
-        'displayName': user.displayName ?? user.email?.split('@').first ?? 'User',
+        'displayName':
+            user.displayName ?? user.email?.split('@').first ?? 'User',
         'email': user.email ?? '',
         'phone': user.phoneNumber ?? '',
         'photoUrl': user.photoURL ?? '',
@@ -57,7 +58,7 @@ class FirestoreService extends ChangeNotifier {
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
     if (_uid == null) return;
-    await _usersCol.doc(_uid).update(data);
+    await _usersCol.doc(_uid).set(data, SetOptions(merge: true));
     // Also update Auth display name if provided
     final user = FirebaseAuth.instance.currentUser;
     if (data.containsKey('displayName') && user != null) {
@@ -65,15 +66,21 @@ class FirestoreService extends ChangeNotifier {
     }
     notifyListeners();
   }
-  Future<void> setHomeLocation(double latitude, double longitude, String? neighborhoodId) async {
+
+  Future<void> setHomeLocation(
+    double latitude,
+    double longitude,
+    String? neighborhoodId,
+  ) async {
     if (_uid == null) return;
-    await _usersCol.doc(_uid).update({
+    await _usersCol.doc(_uid).set({
       'homeLatitude': latitude,
       'homeLongitude': longitude,
       'homeNeighborhoodId': neighborhoodId,
-    });
+    }, SetOptions(merge: true));
     notifyListeners();
   }
+
   // =========================================================================
   // EMISSIONS LOGS
   // =========================================================================
@@ -159,6 +166,23 @@ class FirestoreService extends ChangeNotifier {
     return results;
   }
 
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    if (query.isEmpty) return [];
+    final normalized = query.toLowerCase();
+    final snap = await _usersCol.get();
+    final results = <Map<String, dynamic>>[];
+    for (final doc in snap.docs) {
+      if (doc.id == _uid) continue; // Skip self
+      final data = doc.data()! as Map<String, dynamic>;
+      final name = (data['displayName'] as String? ?? '').toLowerCase();
+      final email = (data['email'] as String? ?? '').toLowerCase();
+      if (name.contains(normalized) || email.contains(normalized)) {
+        results.add({'id': doc.id, ...data});
+      }
+    }
+    return results;
+  }
+
   // =========================================================================
   // EVENTS
   // =========================================================================
@@ -172,21 +196,25 @@ class FirestoreService extends ChangeNotifier {
     return query
         .orderBy('dateTime', descending: false)
         .snapshots()
-        .map((snap) => snap.docs.map((d) {
-              final data = d.data()! as Map<String, dynamic>;
-              return CommunityEvent(
-                id: d.id,
-                title: data['title'] ?? '',
-                description: data['description'] ?? '',
-                organizer: data['organizer'] ?? '',
-                dateTime: (data['dateTime'] as Timestamp).toDate(),
-                location: data['location'] ?? '',
-                category: data['category'] ?? 'Social',
-                attendees: data['attendees'] ?? 0,
-                maxAttendees: data['maxAttendees'] ?? 20,
-                neighborhoodId: data['neighborhoodId'],
-              );
-            }).toList());
+        .map(
+          (snap) => snap.docs.map((d) {
+            final data = d.data()! as Map<String, dynamic>;
+            return CommunityEvent(
+              id: d.id,
+              title: data['title'] ?? '',
+              description: data['description'] ?? '',
+              organizer: data['organizer'] ?? '',
+              dateTime: (data['dateTime'] as Timestamp).toDate(),
+              location: data['location'] ?? '',
+              category: data['category'] ?? 'Social',
+              attendees: data['attendees'] ?? 0,
+              maxAttendees: data['maxAttendees'] ?? 20,
+              neighborhoodId: data['neighborhoodId'],
+              createdBy: data['createdBy'],
+              joinedBy: List<String>.from(data['joinedBy'] ?? []),
+            );
+          }).toList(),
+        );
   }
 
   Future<void> addEvent(CommunityEvent event) async {
@@ -228,6 +256,7 @@ class FirestoreService extends ChangeNotifier {
     final snap = await ref.get();
     if (!snap.exists) return;
     final data = snap.data()! as Map<String, dynamic>;
+    if (data['createdBy'] == _uid) return; // Cannot join own event
     final joined = List<String>.from(data['joinedBy'] ?? []);
     if (joined.contains(_uid)) {
       joined.remove(_uid);
@@ -261,16 +290,16 @@ class FirestoreService extends ChangeNotifier {
   CollectionReference get _resourcesCol => _db.collection('resources');
   CollectionReference get _hobbiesCol => _db.collection('hobbies');
 
-  Stream<List<ResourceListing>> resourcesStream({bool? hobbiesOnly, String? neighborhoodId}) {
+  Stream<List<ResourceListing>> resourcesStream({
+    bool? hobbiesOnly,
+    String? neighborhoodId,
+  }) {
     Query query = hobbiesOnly == true ? _hobbiesCol : _resourcesCol;
     if (neighborhoodId != null) {
       query = query.where('neighborhoodId', isEqualTo: neighborhoodId);
     }
 
-    return query
-        .orderBy('postedAt', descending: true)
-        .snapshots()
-        .map((snap) {
+    return query.orderBy('postedAt', descending: true).snapshots().map((snap) {
       var list = snap.docs.map((d) {
         final data = d.data()! as Map<String, dynamic>;
         return ResourceListing(
@@ -284,22 +313,30 @@ class FirestoreService extends ChangeNotifier {
             orElse: () => ResourceCategory.tools,
           ),
           isAvailable: data['isAvailable'] ?? true,
-          postedAt: (data['postedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          postedAt:
+              (data['postedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
           neighborhoodId: data['neighborhoodId'],
+          latitude: data['latitude']?.toDouble(),
+          longitude: data['longitude']?.toDouble(),
+          createdBy: data['createdBy'],
         );
       }).toList();
 
       if (hobbiesOnly == true) {
         list = list
-            .where((r) =>
-                r.category == ResourceCategory.hobbies ||
-                r.category == ResourceCategory.sports)
+            .where(
+              (r) =>
+                  r.category == ResourceCategory.hobbies ||
+                  r.category == ResourceCategory.sports,
+            )
             .toList();
       } else if (hobbiesOnly == false) {
         list = list
-            .where((r) =>
-                r.category != ResourceCategory.hobbies &&
-                r.category != ResourceCategory.sports)
+            .where(
+              (r) =>
+                  r.category != ResourceCategory.hobbies &&
+                  r.category != ResourceCategory.sports,
+            )
             .toList();
       }
       return list;
@@ -307,10 +344,12 @@ class FirestoreService extends ChangeNotifier {
   }
 
   Future<void> addResource(ResourceListing resource) async {
-    final col = (resource.category == ResourceCategory.hobbies || resource.category == ResourceCategory.sports) 
-        ? _hobbiesCol 
+    final col =
+        (resource.category == ResourceCategory.hobbies ||
+            resource.category == ResourceCategory.sports)
+        ? _hobbiesCol
         : _resourcesCol;
-    
+
     final docRef = col.doc();
     await docRef.set({
       'title': resource.title,
@@ -332,7 +371,11 @@ class FirestoreService extends ChangeNotifier {
         'description': resource.description,
         'lat': resource.latitude,
         'lng': resource.longitude,
-        'type': (resource.category == ResourceCategory.hobbies || resource.category == ResourceCategory.sports) ? MarkerType.hobby.name : MarkerType.sharedResource.name,
+        'type':
+            (resource.category == ResourceCategory.hobbies ||
+                resource.category == ResourceCategory.sports)
+            ? MarkerType.hobby.name
+            : MarkerType.sharedResource.name,
         'timestamp': Timestamp.fromDate(DateTime.now()),
         'reportedBy': resource.ownerName,
         'neighborhoodId': resource.neighborhoodId,
@@ -359,24 +402,28 @@ class FirestoreService extends ChangeNotifier {
         neighborhoodId: data['neighborhoodId'],
         latitude: data['latitude']?.toDouble(),
         longitude: data['longitude']?.toDouble(),
+        createdBy: data['createdBy'],
+        joinedBy: List<String>.from(data['joinedBy'] ?? []),
       );
     }).toList();
   }
 
   Future<List<ResourceListing>> getUserResources() async {
     if (_uid == null) return [];
-    final resSnap = await _resourcesCol.where('createdBy', isEqualTo: _uid).get();
+    final resSnap = await _resourcesCol
+        .where('createdBy', isEqualTo: _uid)
+        .get();
     final hobSnap = await _hobbiesCol.where('createdBy', isEqualTo: _uid).get();
-    
+
     final List<ResourceListing> combined = [];
-    
+
     for (var doc in resSnap.docs) {
       combined.add(_parseResource(doc));
     }
     for (var doc in hobSnap.docs) {
       combined.add(_parseResource(doc));
     }
-    
+
     return combined;
   }
 
@@ -395,6 +442,9 @@ class FirestoreService extends ChangeNotifier {
       isAvailable: data['isAvailable'] ?? true,
       postedAt: (data['postedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       neighborhoodId: data['neighborhoodId'],
+      latitude: data['latitude']?.toDouble(),
+      longitude: data['longitude']?.toDouble(),
+      createdBy: data['createdBy'],
     );
   }
 
@@ -420,7 +470,11 @@ class FirestoreService extends ChangeNotifier {
     }).toList();
   }
 
-  Future<void> deleteUserPost(String docId, String type, {bool isHobby = false}) async {
+  Future<void> deleteUserPost(
+    String docId,
+    String type, {
+    bool isHobby = false,
+  }) async {
     if (type == 'event') {
       await _eventsCol.doc(docId).delete();
     } else if (type == 'resource') {
@@ -449,25 +503,27 @@ class FirestoreService extends ChangeNotifier {
     return query
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) {
-              final data = d.data()! as Map<String, dynamic>;
-              return FeedPost(
-                id: d.id,
-                authorName: data['authorName'] ?? '',
-                authorAvatar: data['authorAvatar'] ?? '',
-                content: data['content'] ?? '',
-                type: PostType.values.firstWhere(
-                  (t) => t.name == (data['type'] ?? 'update'),
-                  orElse: () => PostType.update,
-                ),
-                timestamp:
-                    (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
-                likes: data['likes'] ?? 0,
-                comments: data['comments'] ?? 0,
-                location: data['location'],
-                neighborhoodId: data['neighborhoodId'],
-              );
-            }).toList());
+        .map(
+          (snap) => snap.docs.map((d) {
+            final data = d.data()! as Map<String, dynamic>;
+            return FeedPost(
+              id: d.id,
+              authorName: data['authorName'] ?? '',
+              authorAvatar: data['authorAvatar'] ?? '',
+              content: data['content'] ?? '',
+              type: PostType.values.firstWhere(
+                (t) => t.name == (data['type'] ?? 'update'),
+                orElse: () => PostType.update,
+              ),
+              timestamp:
+                  (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+              likes: data['likes'] ?? 0,
+              comments: data['comments'] ?? 0,
+              location: data['location'],
+              neighborhoodId: data['neighborhoodId'],
+            );
+          }).toList(),
+        );
   }
 
   // =========================================================================
@@ -476,19 +532,28 @@ class FirestoreService extends ChangeNotifier {
   CollectionReference get _chatsCol => _db.collection('chats');
 
   /// Get or create a 1-to-1 chat thread.
-  Future<String> getOrCreateChat(String otherUserName,
-      {String? relatedListingId}) async {
+  Future<String> getOrCreateChat(
+    String otherUserId,
+    String otherUserName, {
+    String? relatedListingId,
+  }) async {
     if (_uid == null) throw Exception('Not signed in');
 
-    // Check for existing chat with this person name (simple approach)
+    final myProfile = await getProfile();
+    final myName =
+        myProfile?['displayName'] ??
+        FirebaseAuth.instance.currentUser?.email?.split('@').first ??
+        'User';
+
+    // Check for existing chat with participants
     final existing = await _chatsCol
         .where('participants', arrayContains: _uid)
         .get();
 
     for (final doc in existing.docs) {
       final data = doc.data()! as Map<String, dynamic>;
-      if (data['otherUserName'] == otherUserName &&
-          data['createdBy'] == _uid) {
+      final parts = List<String>.from(data['participants'] ?? []);
+      if (parts.contains(otherUserId)) {
         return doc.id;
       }
     }
@@ -496,8 +561,8 @@ class FirestoreService extends ChangeNotifier {
     // Create new chat
     final ref = await _chatsCol.add({
       'createdBy': _uid,
-      'participants': [_uid],
-      'otherUserName': otherUserName,
+      'participants': [_uid, otherUserId],
+      'participantNames': {_uid: myName, otherUserId: otherUserName},
       'relatedListingId': relatedListingId,
       'createdAt': FieldValue.serverTimestamp(),
       'lastMessage': '',
@@ -508,15 +573,18 @@ class FirestoreService extends ChangeNotifier {
 
   Stream<QuerySnapshot> chatsStream() {
     if (_uid == null) return const Stream.empty();
-    return _chatsCol
-        .where('participants', arrayContains: _uid)
-        .snapshots();
+    return _chatsCol.where('participants', arrayContains: _uid).snapshots();
   }
 
   Future<Map<String, dynamic>?> getChatById(String chatId) async {
     final snap = await _chatsCol.doc(chatId).get();
     if (!snap.exists) return null;
     return {'id': snap.id, ...snap.data()! as Map<String, dynamic>};
+  }
+
+  Future<void> deleteChat(String chatId) async {
+    if (_uid == null) throw Exception('Not signed in');
+    await _chatsCol.doc(chatId).delete();
   }
 
   Stream<QuerySnapshot> messagesStream(String chatId) {
@@ -555,22 +623,24 @@ class FirestoreService extends ChangeNotifier {
     return query
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) {
-              final data = d.data()! as Map<String, dynamic>;
-              return MapMarkerData(
-                id: d.id,
-                title: data['title'] ?? '',
-                description: data['description'] ?? '',
-                position: LatLng(data['lat'] ?? 0.0, data['lng'] ?? 0.0),
-                type: MarkerType.values.firstWhere(
-                  (t) => t.name == (data['type'] ?? 'accident'),
-                  orElse: () => MarkerType.accident,
-                ),
-                timestamp: (data['timestamp'] as Timestamp).toDate(),
-                reportedBy: data['reportedBy'] ?? 'Unknown',
-                neighborhoodId: data['neighborhoodId'],
-              );
-            }).toList());
+        .map(
+          (snap) => snap.docs.map((d) {
+            final data = d.data()! as Map<String, dynamic>;
+            return MapMarkerData(
+              id: d.id,
+              title: data['title'] ?? '',
+              description: data['description'] ?? '',
+              position: LatLng(data['lat'] ?? 0.0, data['lng'] ?? 0.0),
+              type: MarkerType.values.firstWhere(
+                (t) => t.name == (data['type'] ?? 'accident'),
+                orElse: () => MarkerType.accident,
+              ),
+              timestamp: (data['timestamp'] as Timestamp).toDate(),
+              reportedBy: data['reportedBy'] ?? 'Unknown',
+              neighborhoodId: data['neighborhoodId'],
+            );
+          }).toList(),
+        );
   }
 
   Future<void> addMapMarker(MapMarkerData marker) async {
@@ -596,7 +666,7 @@ class FirestoreService extends ChangeNotifier {
 
     final feedRef = _feedCol.doc();
     final markerRef = _mapMarkersCol.doc(feedRef.id);
-    
+
     batch.set(markerRef, {
       'title': markerData.title,
       'description': markerData.description,

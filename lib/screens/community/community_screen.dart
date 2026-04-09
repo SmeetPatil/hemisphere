@@ -39,9 +39,13 @@ class _CommunityScreenState extends State<CommunityScreen>
 
 
 
-  void _openChatWith(String personName, {String? relatedListingId}) async {
+  void _openChatWith(String userId, String personName, {String? relatedListingId}) async {     
+    if (userId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot message this user.')));
+      return;
+    }
     final chatId = await FirestoreService.instance
-        .getOrCreateChat(personName, relatedListingId: relatedListingId);
+        .getOrCreateChat(userId, personName, relatedListingId: relatedListingId);       
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => ChatScreen(chatId: chatId)),
@@ -179,18 +183,18 @@ class _CommunityScreenState extends State<CommunityScreen>
               children: [
                 _EventsTab(
                   extraTopPadding: 8,
-                  onMessageTap: (name, id) =>
-                      _openChatWith(name, relatedListingId: id),
+                  onMessageTap: (userId, name, id) =>
+                      _openChatWith(userId, name, relatedListingId: id),
                 ),
                 _ResourcesTab(
                   extraTopPadding: 8,
-                  onMessageTap: (name, id) =>
-                      _openChatWith(name, relatedListingId: id),
+                  onMessageTap: (userId, name, id) =>
+                      _openChatWith(userId, name, relatedListingId: id),
                 ),
                 _HobbiesTab(
                   extraTopPadding: 8,
-                  onMessageTap: (name, id) =>
-                      _openChatWith(name, relatedListingId: id),
+                  onMessageTap: (userId, name, id) =>
+                      _openChatWith(userId, name, relatedListingId: id),
                 ),
               ],
             ),
@@ -207,7 +211,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
 class _EventsTab extends StatelessWidget {
   final double extraTopPadding;
-  final void Function(String personName, String relatedId) onMessageTap;
+  final void Function(String userId, String personName, String relatedId) onMessageTap;
 
   const _EventsTab({required this.extraTopPadding, required this.onMessageTap});
 
@@ -232,18 +236,22 @@ class _EventsTab extends StatelessWidget {
           itemCount: events.length,
           itemBuilder: (context, index) {
             final event = events[index];
+            final currentUid = FirebaseAuth.instance.currentUser?.uid;
+            final isCreator = event.createdBy == currentUid;
+            final isJoined = event.joinedBy?.contains(currentUid) ?? false;
+
             return Column(
               children: [
                 EventCard(
                   event: event,
-                  isJoined: false,
+                  isJoined: isJoined,
                   messageText: 'Message ${event.organizer}',
-                  onMessageTap: () => onMessageTap(event.organizer, event.id),
-                  onJoin: () async {
+                  onMessageTap: () => onMessageTap(event.createdBy ?? '', event.organizer, event.id),
+                  onJoin: isCreator ? null : () async {
                     await FirestoreService.instance.toggleEventJoin(event.id);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Toggled join for "${event.title}"')),
+                        SnackBar(content: Text(isJoined ? 'Left ${event.title}' : 'Joined ${event.title}')),
                       );
                     }
                   },
@@ -260,7 +268,7 @@ class _EventsTab extends StatelessWidget {
 
 class _ResourcesTab extends StatelessWidget {
   final double extraTopPadding;
-  final void Function(String personName, String relatedId) onMessageTap;
+  final void Function(String userId, String personName, String relatedId) onMessageTap;
 
   const _ResourcesTab({required this.extraTopPadding, required this.onMessageTap});
 
@@ -289,7 +297,7 @@ class _ResourcesTab extends StatelessWidget {
             return ResourceCard(
               resource: resource,
               messageText: 'Message ${resource.ownerName}',
-              onMessageTap: () => onMessageTap(resource.ownerName, resource.id),
+              onMessageTap: () => onMessageTap(resource.createdBy ?? '', resource.ownerName, resource.id),
             );
           },
         );
@@ -300,7 +308,7 @@ class _ResourcesTab extends StatelessWidget {
 
 class _HobbiesTab extends StatelessWidget {
   final double extraTopPadding;
-  final void Function(String personName, String relatedId) onMessageTap;
+  final void Function(String userId, String personName, String relatedId) onMessageTap;
 
   const _HobbiesTab({required this.extraTopPadding, required this.onMessageTap});
 
@@ -329,7 +337,7 @@ class _HobbiesTab extends StatelessWidget {
             return ResourceCard(
               resource: hobby,
               messageText: 'Message ${hobby.ownerName}',
-              onMessageTap: () => onMessageTap(hobby.ownerName, hobby.id),
+              onMessageTap: () => onMessageTap(hobby.createdBy ?? '', hobby.ownerName, hobby.id),      
             );
           },
         );

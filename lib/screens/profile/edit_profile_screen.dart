@@ -18,6 +18,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _bioController = TextEditingController();
+  final _emergencyContactController = TextEditingController();
   bool _loading = true;
   bool _saving = false;
 
@@ -36,6 +37,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController.text =
         profile?['phone'] ?? _user?.phoneNumber ?? '';
     _bioController.text = profile?['bio'] ?? '';
+    _emergencyContactController.text = profile?['emergencyContact'] ?? '';
     setState(() => _loading = false);
   }
 
@@ -47,6 +49,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'displayName': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'bio': _bioController.text.trim(),
+        'emergencyContact': _emergencyContactController.text.trim(),
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -139,6 +142,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _nameController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
+    _emergencyContactController.dispose();
     super.dispose();
   }
 
@@ -260,8 +264,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       label: 'Bio',
                       icon: Icons.edit_note_rounded,
                       maxLines: 3,
-                    ),
-                    const SizedBox(height: 16),
+                    ),                    const SizedBox(height: 16),
+                    // Emergency Contact
+                    _buildField(
+                      controller: _emergencyContactController,
+                      label: 'Emergency Contact (Phone)',
+                      icon: Icons.contact_emergency_rounded,
+                      maxLines: 1,
+                      keyboardType: TextInputType.phone,
+                    ),                    const SizedBox(height: 16),
 
                     // Email (read-only)
                     _buildReadOnlyRow(

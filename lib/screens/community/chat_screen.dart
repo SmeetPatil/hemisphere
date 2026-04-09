@@ -28,14 +28,30 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadChatInfo() async {
     final chat = await FirestoreService.instance.getChatById(widget.chatId);
     if (!mounted || chat == null) return;
+
+    String otherName = 'User';
+    final pNames = chat['participantNames'] as Map<String, dynamic>?;
+    if (pNames != null) {
+      final parts = List<String>.from(chat['participants'] ?? []);
+      final otherId = parts.firstWhere((p) => p != _myUid, orElse: () => '');
+      if (otherId.isNotEmpty) {
+        otherName = pNames[otherId] ?? 'User';
+      }
+    } else {
+      otherName = chat['otherUserName'] ?? 'User';
+    }
+
     setState(() {
-      _otherUserName = chat['otherUserName'] ?? 'User';
+      _otherUserName = otherName;
     });
   }
 
   void _send() {
     if (_msgController.text.trim().isEmpty) return;
-    FirestoreService.instance.sendMessage(widget.chatId, _msgController.text.trim());
+    FirestoreService.instance.sendMessage(
+      widget.chatId,
+      _msgController.text.trim(),
+    );
     _msgController.clear();
   }
 
@@ -56,8 +72,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 _otherUserName.isNotEmpty
                     ? _otherUserName[0].toUpperCase()
                     : '?',
-                style: AppTextStyles.headlineMedium
-                    .copyWith(color: AppColors.black),
+                style: AppTextStyles.headlineMedium.copyWith(
+                  color: AppColors.black,
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -66,7 +83,11 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Text(
                   _otherUserName,
-                  style: AppTextStyles.headlineSmall.copyWith(fontSize: 22, color: context.h.textPrimary, fontWeight: FontWeight.w700),
+                  style: AppTextStyles.headlineSmall.copyWith(
+                    fontSize: 22,
+                    color: context.h.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Row(
@@ -94,8 +115,11 @@ class _ChatScreenState extends State<ChatScreen> {
           ],
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded,
-              color: context.h.textPrimary, size: 28),
+          icon: Icon(
+            Icons.arrow_back_rounded,
+            color: context.h.textPrimary,
+            size: 28,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -115,25 +139,29 @@ class _ChatScreenState extends State<ChatScreen> {
                   return Center(
                     child: Text(
                       'No messages yet. Say hi!',
-                      style: AppTextStyles.bodyMedium
-                          .copyWith(color: context.h.textSecondary),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: context.h.textSecondary,
+                      ),
                     ),
                   );
                 }
                 return ListView.builder(
                   reverse: true,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 24,
+                  ),
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final data = docs[index].data()! as Map<String, dynamic>;
                     final isMe = data['senderId'] == _myUid;
-                    final timestamp =
-                        (data['timestamp'] as Timestamp?)?.toDate();
+                    final timestamp = (data['timestamp'] as Timestamp?)
+                        ?.toDate();
 
                     return Align(
-                      alignment:
-                          isMe ? Alignment.centerRight : Alignment.centerLeft,
+                      alignment: isMe
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
                       child: Column(
                         crossAxisAlignment: isMe
                             ? CrossAxisAlignment.end
@@ -142,16 +170,22 @@ class _ChatScreenState extends State<ChatScreen> {
                           Container(
                             margin: const EdgeInsets.only(bottom: 4),
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 18, vertical: 14),
+                              horizontal: 18,
+                              vertical: 14,
+                            ),
                             constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.75),
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.75,
+                            ),
                             decoration: BoxDecoration(
                               color: isMe
                                   ? AppColors.yellow
-                                  : context.h.card,
+                                  : AppColors.grey300,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.black, width: 2),
+                              border: Border.all(
+                                color: AppColors.black,
+                                width: 2,
+                              ),
                               boxShadow: const [
                                 BoxShadow(
                                   color: AppColors.black,
@@ -163,9 +197,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             child: Text(
                               data['text'] ?? '',
                               style: AppTextStyles.bodyLarge.copyWith(
-                                color: isMe
-                                    ? AppColors.black
-                                    : context.h.textPrimary,
+                                color: AppColors.black,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -173,8 +205,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           if (timestamp != null)
                             Padding(
                               padding: const EdgeInsets.symmetric(
-                                      horizontal: 4)
-                                  .copyWith(bottom: 12),
+                                horizontal: 4,
+                              ).copyWith(bottom: 12),
                               child: Text(
                                 '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}',
                                 style: AppTextStyles.caption.copyWith(
@@ -192,9 +224,12 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16).copyWith(
-              bottom: 16 + MediaQuery.of(context).padding.bottom,
-            ),
+            padding: const EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16,
+            ).copyWith(bottom: 16 + MediaQuery.of(context).padding.bottom),
             decoration: BoxDecoration(
               color: context.h.card,
               border: Border(top: BorderSide(color: AppColors.black, width: 2)),
@@ -206,7 +241,10 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 Expanded(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: context.h.inputFill,
                       borderRadius: BorderRadius.circular(16),
@@ -221,12 +259,15 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     child: TextField(
                       controller: _msgController,
-                      style: AppTextStyles.bodyLarge
-                          .copyWith(color: context.h.textPrimary, fontWeight: FontWeight.w500),
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        color: context.h.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        hintStyle: AppTextStyles.bodyLarge
-                            .copyWith(color: context.h.textCaption),
+                        hintStyle: AppTextStyles.bodyLarge.copyWith(
+                          color: context.h.textCaption,
+                        ),
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
@@ -250,8 +291,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     ],
                   ),
                   child: IconButton(
-                    icon: const Icon(Icons.send_rounded,
-                        color: AppColors.black, size: 22),
+                    icon: const Icon(
+                      Icons.send_rounded,
+                      color: AppColors.black,
+                      size: 22,
+                    ),
                     onPressed: _send,
                   ),
                 ),

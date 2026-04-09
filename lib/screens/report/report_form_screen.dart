@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../theme/app_theme.dart';
+import '../../providers/dev_mode_provider.dart';
 import 'report_processing_screen.dart';
 
 enum ReportType { accident, waste }
@@ -78,6 +79,20 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     final picker = ImagePicker();
     final image = await picker.pickImage(
       source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 1280,
+    );
+    if (image != null && mounted) {
+      setState(() {
+        _capturedImage = image;
+      });
+    }
+  }
+
+  Future<void> _uploadImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
       imageQuality: 80,
       maxWidth: 1280,
     );
@@ -220,46 +235,100 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 ),
               ),
             ] else ...[
-              GestureDetector(
-                onTap: _captureImage,
-                child: Container(
-                  width: double.infinity,
-                  height: 180,
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.black, width: 2),
-                    boxShadow: const [
-                      BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+              ValueListenableBuilder<bool>(
+                valueListenable: DevModeProvider.instance,
+                builder: (context, isDevMode, _) {
+                  return Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.yellow,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.black, width: 2),
-                          boxShadow: const [
-                            BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt_rounded,
-                          color: AppColors.black,
-                          size: 32,
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _captureImage,
+                          child: Container(
+                            height: 180,
+                            decoration: BoxDecoration(
+                              color: AppColors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.black, width: 2),
+                              boxShadow: const [
+                                BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.yellow,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: AppColors.black, width: 2),
+                                    boxShadow: const [
+                                      BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt_rounded,
+                                    color: AppColors.black,
+                                    size: 32,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(isDevMode ? 'Camera' : 'Tap to Open Camera', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black)),
+                                if (!isDevMode) ...[
+                                  const SizedBox(height: 4),
+                                  Text('Take a photo of the situation',
+                                      style: AppTextStyles.caption.copyWith(color: AppColors.black.withValues(alpha: 0.6))),
+                                ],
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text('Tap to Open Camera', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black)),
-                      const SizedBox(height: 4),
-                      Text('Take a photo of the situation',
-                          style: AppTextStyles.caption.copyWith(color: AppColors.black.withValues(alpha: 0.6))),
+                      if (isDevMode) ...[
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: _uploadImage,
+                            child: Container(
+                              height: 180,
+                              decoration: BoxDecoration(
+                                color: AppColors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.black, width: 2),
+                                boxShadow: const [
+                                  BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(4, 4)),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.green,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: AppColors.black, width: 2),
+                                      boxShadow: const [
+                                        BoxShadow(color: AppColors.black, blurRadius: 0, offset: Offset(2, 2)),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.photo_library_rounded,
+                                      color: AppColors.black,
+                                      size: 32,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text('Gallery', style: AppTextStyles.labelLarge.copyWith(color: AppColors.black)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  ),
-                ),
+                  );
+                },
               ),
             ],
             const SizedBox(height: 24),
@@ -347,6 +416,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             Text('Description (Optional)', style: AppTextStyles.headlineSmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Container(
+              margin: const EdgeInsets.only(right: 4, bottom: 4),
               decoration: BoxDecoration(
                 color: context.h.inputFill,
                 borderRadius: BorderRadius.circular(16),
@@ -360,6 +430,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
                 maxLines: 4,
                 style: AppTextStyles.bodyMedium.copyWith(color: context.h.textPrimary),
                 decoration: InputDecoration(
+                  filled: false,
                   hintText: isAccident
                       ? 'Describe the accident: vehicles involved, injuries, road condition...'
                       : 'Describe the waste issue: type of waste, size of dump, urgency...',
@@ -377,6 +448,7 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
             GestureDetector(
               onTap: _isSubmitting ? null : _submitReport,
               child: Container(
+                margin: const EdgeInsets.only(right: 4, bottom: 4),
                 width: double.infinity,
                 height: 60,
                 decoration: BoxDecoration(
@@ -411,3 +483,4 @@ class _ReportFormScreenState extends State<ReportFormScreen> {
     );
   }
 }
+

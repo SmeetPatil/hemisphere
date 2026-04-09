@@ -521,7 +521,7 @@ class _MapScreenState extends State<MapScreen>
           ),
           children: [
             TileLayer(
-              urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}',
+              urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}',
               additionalOptions: {
                 'accessToken': dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '',
               },
@@ -774,6 +774,11 @@ class _MapScreenState extends State<MapScreen>
           right: 16,
           child: Column(
             children: [
+              _MapActionButton(
+                icon: Icons.explore_outlined,
+                onTap: () => _mapController.rotate(0.0),
+              ),
+              const SizedBox(height: 10),
               _MapActionButton(
                 icon: _loadingLocation
                     ? Icons.hourglass_top_rounded

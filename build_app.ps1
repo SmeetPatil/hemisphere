@@ -27,7 +27,7 @@ if ($match.Success) {
 # Run Flutter build
 $buildCommand = "flutter build $BuildType"
 if ($Release) {
-    $buildCommand += " --release"
+    $buildCommand += " --release --obfuscate --split-debug-info=build/app/outputs/symbols"
 } else {
     $buildCommand += " --debug"
 }
