@@ -4,6 +4,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:http/http.dart' as http;
 import '../models/map_marker.dart';
 import '../theme/app_theme.dart';
+import '../services/auth_service.dart';
+import '../services/firestore_service.dart';
 import 'package:intl/intl.dart';
 
 class MarkerInfoSheet extends StatefulWidget {
@@ -18,19 +20,45 @@ class MarkerInfoSheet extends StatefulWidget {
 class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
   String? _address;
   bool _loadingAddress = true;
+  String? _actualReporterName;
 
   @override
   void initState() {
     super.initState();
     _fetchAddress();
+    _resolveReporterName();
+  }
+
+  Future<void> _resolveReporterName() async {
+    final reportedBy = widget.marker.reportedBy;
+    final createdBy = widget.marker.createdBy;
+
+    // If it was saved improperly as 'You' by another testing user/dummy account,
+    // resolve it backwards using their createdBy uid.
+    if (reportedBy == 'You' && createdBy != null) {
+      try {
+        final profile = await FirestoreService.instance.getProfile(createdBy);
+        if (profile != null &&
+            profile['displayName'] != null &&
+            profile['displayName'].toString().isNotEmpty) {
+          if (mounted)
+            setState(() => _actualReporterName = profile['displayName']);
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> _fetchAddress() async {
     final lat = widget.marker.position.latitude;
     final lng = widget.marker.position.longitude;
-    final url = Uri.parse('https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json');
+    final url = Uri.parse(
+      'https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json',
+    );
     try {
-      final res = await http.get(url, headers: {'User-Agent': 'HemisphereApp/1.0 (flutter)'});
+      final res = await http.get(
+        url,
+        headers: {'User-Agent': 'HemisphereApp/1.0 (flutter)'},
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
@@ -71,7 +99,8 @@ class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
 
     // Fallback to Google Maps web
     final webUri = Uri.parse(
-        'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+      'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
+    );
     if (await canLaunchUrl(webUri)) {
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
     }
@@ -82,6 +111,22 @@ class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri);
     }
+  }
+
+  String get _displayReportedBy {
+    if (_actualReporterName != null) {
+      return _actualReporterName!;
+    }
+
+    final reportedBy = widget.marker.reportedBy;
+
+    // If an old post was specifically saved linearly as 'You' without a matching createdBy profile:
+    if (reportedBy == 'You') {
+      return 'Anonymous User';
+    }
+
+    // Return the actual name
+    return reportedBy;
   }
 
   @override
@@ -112,7 +157,10 @@ class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: widget.marker.color.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -120,7 +168,11 @@ class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(widget.marker.icon, size: 14, color: widget.marker.color),
+                    Icon(
+                      widget.marker.icon,
+                      size: 14,
+                      color: widget.marker.color,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       widget.marker.typeLabel,
@@ -135,27 +187,46 @@ class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
               const Spacer(),
               Icon(Icons.access_time, size: 14, color: context.h.iconSubtle),
               const SizedBox(width: 4),
-              Text(_formatTime(), style: AppTextStyles.caption.copyWith(color: context.h.textCaption)),
+              Text(
+                _formatTime(),
+                style: AppTextStyles.caption.copyWith(
+                  color: context.h.textCaption,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           // Title
-          Text(widget.marker.title, style: AppTextStyles.headlineMedium.copyWith(color: context.h.textPrimary)),
+          Text(
+            widget.marker.title,
+            style: AppTextStyles.headlineMedium.copyWith(
+              color: context.h.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
           // Description
           Text(
             widget.marker.description,
-            style: AppTextStyles.bodyMedium.copyWith(height: 1.5, color: context.h.textSecondary),
+            style: AppTextStyles.bodyMedium.copyWith(
+              height: 1.5,
+              color: context.h.textSecondary,
+            ),
           ),
           const SizedBox(height: 16),
           // Reported by
           Row(
             children: [
-              Icon(Icons.person_outline_rounded, size: 16, color: context.h.iconSubtle),
+              Icon(
+                Icons.person_outline_rounded,
+                size: 16,
+                color: context.h.iconSubtle,
+              ),
               const SizedBox(width: 6),
               Text(
-                'Reported by ${widget.marker.reportedBy}',
-                style: AppTextStyles.bodySmall.copyWith(color: context.h.textSecondary),
+                'Reported by $_displayReportedBy',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: context.h.textSecondary,
+                ),
               ),
             ],
           ),
@@ -167,11 +238,20 @@ class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
               Icon(Icons.location_on, size: 16, color: context.h.iconSubtle),
               const SizedBox(width: 6),
               Expanded(
-                child: _loadingAddress 
-                    ? Text('Loading address...', style: AppTextStyles.bodySmall.copyWith(color: context.h.textSecondary, fontStyle: FontStyle.italic))
+                child: _loadingAddress
+                    ? Text(
+                        'Loading address...',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: context.h.textSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      )
                     : Text(
                         _address ?? 'Address not available',
-                        style: AppTextStyles.bodySmall.copyWith(color: context.h.textPrimary, fontWeight: FontWeight.w500),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: context.h.textPrimary,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
               ),
             ],
@@ -180,10 +260,14 @@ class _MarkerInfoSheetState extends State<MarkerInfoSheet> {
           // Coordinates
           Row(
             children: [
-              const SizedBox(width: 22), // Account for icon width + spacing above
+              const SizedBox(
+                width: 22,
+              ), // Account for icon width + spacing above
               Text(
                 '${widget.marker.position.latitude.toStringAsFixed(4)}, ${widget.marker.position.longitude.toStringAsFixed(4)}',
-                style: AppTextStyles.bodySmall.copyWith(color: context.h.textSecondary),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: context.h.textSecondary,
+                ),
               ),
             ],
           ),

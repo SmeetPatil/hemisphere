@@ -5,6 +5,7 @@ import 'report_form_screen.dart';
 import 'report_confirmation_screen.dart'; // We can use or create a new result screen
 import '../../services/ml_service.dart';
 import '../../services/firestore_service.dart';
+import '../../services/auth_service.dart';
 import '../../providers/map_provider.dart';
 import '../../models/map_marker.dart';
 import '../../models/feed_post.dart';
@@ -117,6 +118,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
 
   Future<void> _publishDummyData(String result) async {
     final neighborhoodId = MapProvider.instance.currentNeighborhoodId;
+    final currentUserRef = AuthService.instance.currentUser?.displayName ?? 'Anonymous User';
 
     if (widget.reportType == ReportType.accident) {
       if (result == 'accident') {
@@ -129,7 +131,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
             position: LatLng(widget.latitude, widget.longitude),
             type: MarkerType.accident,
             timestamp: DateTime.now(),
-            reportedBy: 'You',
+            reportedBy: currentUserRef,
           ),
           feedData: FeedPost(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -152,7 +154,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
             position: LatLng(widget.latitude, widget.longitude),
             type: MarkerType.roadConstruction,
             timestamp: DateTime.now(),
-            reportedBy: 'You',
+            reportedBy: currentUserRef,
           ),
           feedData: FeedPost(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -177,7 +179,7 @@ class _ReportProcessingScreenState extends State<ReportProcessingScreen>
             position: LatLng(widget.latitude, widget.longitude),
             type: MarkerType.wasteCollection,
             timestamp: DateTime.now(),
-            reportedBy: 'You',
+            reportedBy: currentUserRef,
           ),
           feedData: FeedPost(
             id: DateTime.now().millisecondsSinceEpoch.toString(),

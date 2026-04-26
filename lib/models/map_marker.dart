@@ -13,6 +13,7 @@ class MapMarkerData {
   final String? imageUrl;
   final String reportedBy;
   final String? neighborhoodId;
+  final String? createdBy;
 
   const MapMarkerData({
     required this.id,
@@ -24,6 +25,7 @@ class MapMarkerData {
     this.imageUrl,
     required this.reportedBy,
     this.neighborhoodId,
+    this.createdBy,
   });
 
   IconData get icon {

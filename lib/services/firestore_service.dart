@@ -638,6 +638,7 @@ class FirestoreService extends ChangeNotifier {
               timestamp: (data['timestamp'] as Timestamp).toDate(),
               reportedBy: data['reportedBy'] ?? 'Unknown',
               neighborhoodId: data['neighborhoodId'],
+              createdBy: data['createdBy'],
             );
           }).toList(),
         );
